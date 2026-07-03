@@ -1092,3 +1092,23 @@ body {
     0% { filter: drop-shadow(0 2px 6px rgba(175, 82, 222, 0.2)); }
     100% { filter: drop-shadow(0 2px 14px rgba(175, 82, 222, 0.5)); }
 }
+
+/* Price pulse animations */
+.price-up-pulse {
+    animation: pulse-green-flash 0.8s ease-out;
+}
+
+.price-down-pulse {
+    animation: pulse-red-flash 0.8s ease-out;
+}
+
+@keyframes pulse-green-flash {
+    0% { color: var(--neon-green); text-shadow: 0 0 20px var(--neon-green); transform: scale(1.02); }
+    100% { color: #ffffff; text-shadow: 0 0 15px rgba(255, 255, 255, 0.1); transform: scale(1); }
+}
+
+@keyframes pulse-red-flash {
+    0% { color: var(--neon-red); text-shadow: 0 0 20px var(--neon-red); transform: scale(0.98); }
+    100% { color: #ffffff; text-shadow: 0 0 15px rgba(255, 255, 255, 0.1); transform: scale(1); }
+}
+

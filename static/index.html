@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC AI Analytics Dashboard (TradingView MCP + Groq)</title>
+    <title>Bảng Phân Tích BTC AI (TradingView MCP + Groq)</title>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- FontAwesome Icons -->
@@ -19,35 +19,35 @@
     </div>
 
     <div class="app-container">
-        <!-- Sidebar/Navbar -->
+        <!-- Header -->
         <header class="app-header">
             <div class="logo-area">
                 <div class="logo-icon"><i class="fa-solid fa-brain-circuit"></i></div>
                 <div class="logo-text">
-                    <h1>BTC AI ANALYTICS</h1>
-                    <span>TradingView MCP &bull; Groq Hybrid Intel</span>
+                    <h1>BTC AI PHÂN TÍCH</h1>
+                    <span>TradingView MCP &bull; Trí tuệ Groq Hybrid</span>
                 </div>
             </div>
             
             <div class="header-controls">
                 <div class="status-badge" id="api-status">
                     <span class="status-indicator yellow"></span>
-                    <span class="status-label">Checking API Key...</span>
+                    <span class="status-label">Đang kiểm tra API Key...</span>
                 </div>
 
                 <div class="timeframe-selector">
-                    <button class="tf-btn" data-tf="15m">15M</button>
-                    <button class="tf-btn active" data-tf="1h">1H</button>
-                    <button class="tf-btn" data-tf="4h">4H</button>
-                    <button class="tf-btn" data-tf="1D">1D</button>
+                    <button class="tf-btn" data-tf="15m">15P</button>
+                    <button class="tf-btn active" data-tf="1h">1G</button>
+                    <button class="tf-btn" data-tf="4h">4G</button>
+                    <button class="tf-btn" data-tf="1D">1N</button>
                 </div>
 
                 <button class="settings-btn" id="open-settings">
-                    <i class="fa-solid fa-cog"></i> Settings
+                    <i class="fa-solid fa-cog"></i> Cài đặt
                 </button>
 
                 <button class="analyze-btn" id="run-analysis">
-                    <i class="fa-solid fa-bolt"></i> Run Analysis
+                    <i class="fa-solid fa-bolt"></i> Chạy phân tích
                 </button>
             </div>
         </header>
@@ -58,7 +58,7 @@
             <!-- COLUMN 1: Market Ticker & Live Data -->
             <section class="grid-item card-glass live-market-panel">
                 <div class="card-header">
-                    <h2><i class="fa-solid fa-chart-line text-blue"></i> Live Market Quote</h2>
+                    <h2><i class="fa-solid fa-chart-line text-blue"></i> Báo giá thị trường trực tiếp</h2>
                     <span class="source-tag">Yahoo Finance</span>
                 </div>
                 <div class="market-quote-display">
@@ -74,27 +74,27 @@
                     </div>
                     <div class="market-stats">
                         <div class="stat-row">
-                            <span class="stat-lbl">52W High</span>
+                            <span class="stat-lbl">Cao nhất 52 tuần</span>
                             <span class="stat-val" id="stat-52w-high">$ --,---.--</span>
                         </div>
                         <div class="stat-row">
-                            <span class="stat-lbl">52W Low</span>
+                            <span class="stat-lbl">Thấp nhất 52 tuần</span>
                             <span class="stat-val" id="stat-52w-low">$ --,---.--</span>
                         </div>
                         <div class="stat-row">
-                            <span class="stat-lbl">Market State</span>
-                            <span class="stat-val state-active" id="stat-market-state">REGULAR</span>
+                            <span class="stat-lbl">Trạng thái thị trường</span>
+                            <span class="stat-val state-active" id="stat-market-state">ĐANG HOẠT ĐỘNG</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="card-header mt-4">
-                    <h2><i class="fa-solid fa-gauge-high text-purple"></i> Technical Gauges</h2>
+                    <h2><i class="fa-solid fa-gauge-high text-purple"></i> Biểu đồ kỹ thuật</h2>
                     <span class="source-tag">TradingView MCP</span>
                 </div>
                 <div class="gauges-container">
                     <div class="gauge-box">
-                        <span class="gauge-name">RSI (14)</span>
+                        <span class="gauge-name">Chỉ số RSI (14)</span>
                         <div class="gauge-bar-wrapper">
                             <div class="gauge-bar-value" id="rsi-val-bar" style="width: 50%;"></div>
                             <div class="gauge-marker oversold">30</div>
@@ -102,19 +102,19 @@
                         </div>
                         <div class="gauge-meta">
                             <span id="rsi-val">50.0</span>
-                            <span class="badge" id="rsi-status">Neutral</span>
+                            <span class="badge" id="rsi-status">Trung lập</span>
                         </div>
                     </div>
 
                     <div class="gauge-box">
-                        <span class="gauge-name">MACD Momentum</span>
+                        <span class="gauge-name">Động lượng MACD</span>
                         <div class="macd-display">
                             <div class="macd-line-val">
-                                <span class="lbl">MACD</span>
+                                <span class="lbl">Đường MACD</span>
                                 <span class="val" id="macd-line">--.--</span>
                             </div>
                             <div class="macd-signal-val">
-                                <span class="lbl">Signal</span>
+                                <span class="lbl">Đường Tín Hiệu</span>
                                 <span class="val" id="macd-signal">--.--</span>
                             </div>
                             <div class="macd-status" id="macd-crossover">--</div>
@@ -122,16 +122,16 @@
                     </div>
 
                     <div class="gauge-box">
-                        <span class="gauge-name">Bollinger Bands</span>
+                        <span class="gauge-name">Dải Bollinger (BB)</span>
                         <div class="bb-status-box">
                             <div class="bb-channel">
-                                <div class="bb-band upper">Upper: <span id="bb-upper">$--,---</span></div>
+                                <div class="bb-band upper">Dải trên: <span id="bb-upper">$--,---</span></div>
                                 <div class="bb-price-position" id="bb-position" style="left: 50%;"></div>
-                                <div class="bb-band lower">Lower: <span id="bb-lower">$--,---</span></div>
+                                <div class="bb-band lower">Dải dưới: <span id="bb-lower">$--,---</span></div>
                             </div>
                             <div class="bb-meta">
-                                <span>BB Width: <span id="bb-width">-.--</span></span>
-                                <span id="bb-description">Neutral squeeze</span>
+                                <span>Độ rộng BB: <span id="bb-width">-.--</span></span>
+                                <span id="bb-description">Tích lũy trung tính</span>
                             </div>
                         </div>
                     </div>
@@ -141,31 +141,31 @@
             <!-- COLUMN 2: AI Verdict & Analysis (Groq) -->
             <section class="grid-item card-glass ai-analysis-panel">
                 <div class="card-header">
-                    <h2><i class="fa-solid fa-robot text-cyan"></i> Groq AI Market Verdict</h2>
+                    <h2><i class="fa-solid fa-robot text-cyan"></i> Nhận định thị trường từ AI Groq</h2>
                     <span class="model-tag" id="active-model">llama-3.3-70b-versatile</span>
                 </div>
 
                 <!-- Analysis Initial/Empty State -->
                 <div class="analysis-empty-state" id="analysis-empty">
                     <div class="empty-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-                    <h3>Ready to Analyze BTC</h3>
-                    <p>Select your timeframe and click the "Run Analysis" button above to fetch TradingView MCP data and run Groq AI intelligence.</p>
+                    <h3>Sẵn sàng phân tích BTC</h3>
+                    <p>Chọn khung thời gian và nhấn nút "Chạy phân tích" ở trên để lấy dữ liệu từ TradingView MCP và kích hoạt phân tích từ AI Groq.</p>
                 </div>
 
                 <!-- Analysis Loading State -->
                 <div class="analysis-loading-state hidden" id="analysis-loading">
                     <div class="loading-ring"><div></div><div></div><div></div><div></div></div>
-                    <h3>Ingesting Market Confluence</h3>
-                    <p class="loading-step" id="loading-step">Connecting to TradingView MCP...</p>
+                    <h3>Đang tổng hợp dữ liệu thị trường</h3>
+                    <p class="loading-step" id="loading-step">Đang kết nối tới TradingView MCP...</p>
                 </div>
 
                 <!-- Analysis Content Area -->
                 <div class="analysis-content hidden" id="analysis-results">
                     <div class="verdict-header">
-                        <div class="recommendation-badge" id="ai-verdict">HOLD</div>
+                        <div class="recommendation-badge" id="ai-verdict">TRUNG LẬP</div>
                         <div class="confidence-container">
                             <div class="confidence-header">
-                                <span>AI Confidence</span>
+                                <span>Độ tin cậy của AI</span>
                                 <span id="ai-confidence">0%</span>
                             </div>
                             <div class="confidence-progress-bar">
@@ -175,21 +175,21 @@
                     </div>
 
                     <div class="justification-box">
-                        <h3>Summary Justification</h3>
-                        <p id="ai-justification">No analysis run yet.</p>
+                        <h3>Tóm tắt nhận định</h3>
+                        <p id="ai-justification">Chưa thực hiện phân tích nào.</p>
                     </div>
 
                     <div class="thesis-columns">
                         <div class="thesis-col bullish-thesis">
-                            <h3><i class="fa-solid fa-circle-chevron-up text-green"></i> Bullish Thesis</h3>
+                            <h3><i class="fa-solid fa-circle-chevron-up text-green"></i> Luận điểm tăng giá</h3>
                             <ul id="bullish-points">
-                                <li>Waiting for run...</li>
+                                <li>Đang chờ...</li>
                             </ul>
                         </div>
                         <div class="thesis-col bearish-thesis">
-                            <h3><i class="fa-solid fa-circle-chevron-down text-red"></i> Bearish Thesis</h3>
+                            <h3><i class="fa-solid fa-circle-chevron-down text-red"></i> Luận điểm giảm giá</h3>
                             <ul id="bearish-points">
-                                <li>Waiting for run...</li>
+                                <li>Đang chờ...</li>
                             </ul>
                         </div>
                     </div>
@@ -199,47 +199,47 @@
             <!-- COLUMN 3: Indicators Checklist & News Sentiment -->
             <section class="grid-item card-glass checklist-news-panel">
                 <div class="card-header">
-                    <h2><i class="fa-solid fa-square-check text-green"></i> Technical Confluence</h2>
-                    <span class="source-tag">TradingView Summary</span>
+                    <h2><i class="fa-solid fa-square-check text-green"></i> Tín hiệu đồng thuận kỹ thuật</h2>
+                    <span class="source-tag">Tóm tắt TV</span>
                 </div>
                 <div class="technical-confluence-summary">
                     <div class="confluence-rating">
-                        <span class="confluence-lbl">Overall TV Signal</span>
-                        <span class="confluence-val" id="tv-signal">NEUTRAL</span>
+                        <span class="confluence-lbl">Tín hiệu TV tổng hợp</span>
+                        <span class="confluence-val" id="tv-signal">TRUNG LẬP</span>
                     </div>
                     <div class="indicators-grid" id="indicators-grid">
                         <div class="indicator-row">
-                            <span>RSI(14) Momentum</span>
-                            <span class="badge badge-neutral" id="ind-rsi">NEUTRAL</span>
+                            <span>Động lượng RSI(14)</span>
+                            <span class="badge badge-neutral" id="ind-rsi">TRUNG LẬP</span>
                         </div>
                         <div class="indicator-row">
-                            <span>MACD Crossover</span>
-                            <span class="badge badge-neutral" id="ind-macd">NEUTRAL</span>
+                            <span>Đường cắt MACD</span>
+                            <span class="badge badge-neutral" id="ind-macd">TRUNG LẬP</span>
                         </div>
                         <div class="indicator-row">
-                            <span>Stochastic Oscillator</span>
-                            <span class="badge badge-neutral" id="ind-stoch">NEUTRAL</span>
+                            <span>Chỉ báo Stochastic</span>
+                            <span class="badge badge-neutral" id="ind-stoch">TRUNG LẬP</span>
                         </div>
                         <div class="indicator-row">
-                            <span>ADX Trend Strength</span>
-                            <span class="badge badge-neutral" id="ind-adx">NEUTRAL</span>
+                            <span>Độ mạnh xu hướng ADX</span>
+                            <span class="badge badge-neutral" id="ind-adx">TRUNG LẬP</span>
                         </div>
                         <div class="indicator-row">
-                            <span>EMA(20) / SMA(20)</span>
-                            <span class="badge badge-neutral" id="ind-ma">NEUTRAL</span>
+                            <span>Đường trung bình EMA(20) / SMA(20)</span>
+                            <span class="badge badge-neutral" id="ind-ma">TRUNG LẬP</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="card-header mt-4">
-                    <h2><i class="fa-solid fa-newspaper text-cyan"></i> Market News & Headlines</h2>
-                    <span class="source-tag">RSS feeds</span>
+                    <h2><i class="fa-solid fa-newspaper text-cyan"></i> Tin tức thị trường nổi bật</h2>
+                    <span class="source-tag">Kênh RSS</span>
                 </div>
                 <div class="news-list" id="news-container">
                     <div class="news-item">
-                        <span class="news-time">Just now</span>
-                        <a href="#" class="news-title">Click Run Analysis to fetch latest market news headlines</a>
-                        <span class="news-source">System</span>
+                        <span class="news-time">Vừa xong</span>
+                        <a href="#" class="news-title">Nhấn nút "Chạy phân tích" để cập nhật các tin tức và tiêu đề thị trường mới nhất</a>
+                        <span class="news-source">Hệ thống</span>
                     </div>
                 </div>
             </section>
@@ -250,24 +250,24 @@
     <div class="modal-overlay hidden" id="settings-modal">
         <div class="modal card-glass">
             <div class="modal-header">
-                <h2><i class="fa-solid fa-sliders text-cyan"></i> Settings & Keys</h2>
+                <h2><i class="fa-solid fa-sliders text-cyan"></i> Cài đặt & Khóa API</h2>
                 <button class="close-btn" id="close-settings"><i class="fa-solid fa-times"></i></button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="groq-api-key">Groq API Key</label>
+                    <label for="groq-api-key">Mã API Groq</label>
                     <div class="input-wrapper">
                         <i class="fa-solid fa-key"></i>
                         <input type="password" id="groq-api-key" placeholder="gsk_...">
                     </div>
-                    <small>Stored locally in your browser's LocalStorage. Never saved on the server unless you set it as an env variable.</small>
+                    <small>Được lưu trữ cục bộ trong trình duyệt của bạn (LocalStorage). Không bao giờ gửi lên máy chủ trừ khi bạn thiết lập biến môi trường server.</small>
                 </div>
                 <div class="form-group">
-                    <label for="groq-model">Groq Model</label>
+                    <label for="groq-model">Mô hình Groq</label>
                     <div class="input-wrapper">
                         <i class="fa-solid fa-microchip"></i>
                         <select id="groq-model">
-                            <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Recommended)</option>
+                            <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Khuyên dùng)</option>
                             <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant</option>
                             <option value="mixtral-8x7b-32768">Mixtral 8x7B 32k</option>
                             <option value="gemma2-9b-it">Gemma 2 9B IT</option>
@@ -275,8 +275,8 @@
                     </div>
                 </div>
                 <div class="modal-actions">
-                    <button class="btn btn-secondary" id="cancel-settings">Cancel</button>
-                    <button class="btn btn-primary" id="save-settings">Save Changes</button>
+                    <button class="btn btn-secondary" id="cancel-settings">Hủy</button>
+                    <button class="btn btn-primary" id="save-settings">Lưu thay đổi</button>
                 </div>
             </div>
         </div>
@@ -284,7 +284,7 @@
 
     <!-- TOAST NOTIFICATION -->
     <div class="toast hidden" id="toast">
-        <i class="fa-solid fa-circle-info"></i> <span id="toast-message">Notification message here</span>
+        <i class="fa-solid fa-circle-info"></i> <span id="toast-message">Thông báo hiển thị tại đây</span>
     </div>
 
     <script src="/static/app.js"></script>

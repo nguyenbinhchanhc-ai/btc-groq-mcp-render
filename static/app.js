@@ -2,6 +2,7 @@
 let currentModel = localStorage.getItem('groq-model') || 'llama-3.3-70b-versatile';
 let currentTimeframe = '1h';
 let isAnalyzing = false;
+let lastFetchedPrice = 0;
 
 // DOM Elements
 const elements = {
@@ -66,23 +67,62 @@ const elements = {
     toastMsg: document.getElementById('toast-message')
 };
 
-// Loading step text sequences
+// Loading step text sequences in Vietnamese
 const loadingSteps = [
-    "Connecting to TradingView MCP...",
-    "Querying Binance real-time order books...",
-    "Fetching Yahoo Finance historical volatility data...",
-    "Retrieving live cryptocurrency financial headlines...",
-    "Analyzing Technical Indicators (RSI, MACD, Bollinger Bands)...",
-    "Running multi-agent analysis debate on Groq AI...",
-    "Formulating consensus trading recommendation..."
+    "Đang kết nối tới TradingView MCP...",
+    "Truy vấn sổ lệnh Binance thời gian thực...",
+    "Lấy dữ liệu biến động lịch sử Yahoo Finance...",
+    "Truy xuất tin tức thị trường cryptocurrency mới nhất...",
+    "Tính toán các chỉ báo (RSI, MACD, Bollinger Bands)...",
+    "Chạy lập luận đa tác nhân trên AI Groq...",
+    "Tổng hợp đề xuất giao dịch đồng thuận..."
 ];
+
+// Translators for UI signals
+const textMap = {
+    'STRONG BUY': 'MUA MẠNH',
+    'BUY': 'MUA',
+    'HOLD': 'TRUNG LẬP',
+    'SELL': 'BÁN',
+    'STRONG SELL': 'BÁN MẠNH',
+    
+    'NEUTRAL': 'TRUNG LẬP',
+    'BULLISH': 'TĂNG GIÁ',
+    'BEARISH': 'GIẢM GIÁ',
+    
+    'Neutral': 'Trung lập',
+    'Oversold': 'Quá bán',
+    'Overbought': 'Quá mua',
+    
+    'Bullish Cross': 'Cắt nhau Tăng giá',
+    'Bearish Cross': 'Cắt nhau Giảm giá',
+    
+    'WEAK TREND': 'XU HƯỚNG YẾU',
+    'STRONG TREND': 'XU HƯỚNG MẠNH',
+    
+    'REGULAR': 'ĐANG HOẠT ĐỘNG',
+    'CLOSED': 'ĐÓNG CỬA',
+    'PRE': 'TIỀN THỊ TRƯỜNG',
+    'POST': 'SAU THỊ TRƯỜNG'
+};
+
+function translate(text) {
+    if (!text) return '--';
+    const cleanText = text.trim();
+    return textMap[cleanText] || textMap[cleanText.toUpperCase()] || cleanText;
+}
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
     checkApiKeyStatus();
     setupEventListeners();
-    fetchQuoteOnly(); // Initial silent fetch of live price
+    fetchQuoteOnly(); // Initial quote fetch
+    
+    // Setup automatic real-time price polling every 5 seconds
+    setInterval(() => {
+        fetchQuoteOnly();
+    }, 5000);
 });
 
 // Setup Event Listeners
@@ -94,7 +134,9 @@ function setupEventListeners() {
             document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             currentTimeframe = e.target.getAttribute('data-tf');
-            showToast(`Timeframe changed to ${currentTimeframe}`);
+            
+            const tfNames = { '15m': '15 phút', '1h': '1 giờ', '4h': '4 giờ', '1D': '1 ngày' };
+            showToast(`Khung thời gian chuyển sang ${tfNames[currentTimeframe]}`);
         });
     });
 
@@ -130,7 +172,7 @@ function setupEventListeners() {
         
         checkApiKeyStatus();
         elements.settingsModal.classList.add('hidden');
-        showToast('Settings saved successfully!');
+        showToast('Đã lưu cấu hình thành công!');
     });
 }
 
@@ -147,10 +189,10 @@ function checkApiKeyStatus() {
     
     if (key && key.startsWith('gsk_')) {
         indicator.className = 'status-indicator green';
-        label.innerText = 'Groq API Key Ready';
+        label.innerText = 'Groq API Key Sẵn Sàng';
     } else {
         indicator.className = 'status-indicator yellow';
-        label.innerText = 'Missing Groq Key (Set in Settings)';
+        label.innerText = 'Chưa có Khóa Groq (Cài đặt)';
     }
 }
 
@@ -163,7 +205,7 @@ function showToast(message) {
     }, 3000);
 }
 
-// Fetch live price quote only (without full AI analysis)
+// Fetch live price quote only
 async function fetchQuoteOnly() {
     try {
         const response = await fetch('/api/quote?symbol=BTC-USD');
@@ -172,8 +214,47 @@ async function fetchQuoteOnly() {
             updatePriceUI(data);
         }
     } catch (e) {
-        console.error('Failed to fetch initial quote', e);
+        console.error('Failed to poll quote', e);
     }
+}
+
+// Update Price display area with change flash effect
+function updatePriceUI(data) {
+    if (!data || data.error) return;
+    
+    const oldPrice = lastFetchedPrice;
+    const newPrice = data.price;
+    lastFetchedPrice = newPrice;
+    
+    const formattedPrice = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(newPrice);
+    elements.livePrice.innerText = formattedPrice;
+    
+    // Pulse animation when price changes
+    if (oldPrice > 0 && oldPrice !== newPrice) {
+        const pulseClass = newPrice > oldPrice ? 'price-up-pulse' : 'price-down-pulse';
+        elements.livePrice.classList.add(pulseClass);
+        setTimeout(() => {
+            elements.livePrice.classList.remove(pulseClass);
+        }, 800);
+    }
+    
+    const chgSign = data.change >= 0 ? '+' : '';
+    const chgPct = data.change_pct;
+    const formattedChg = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(data.change));
+    
+    elements.priceChange.className = data.change >= 0 ? 'price-change positive' : 'price-change negative';
+    elements.priceChange.innerHTML = `<i class="fa-solid ${data.change >= 0 ? 'fa-caret-up' : 'fa-caret-down'}"></i> ${chgSign}${chgPct}% (${chgSign}${formattedChg})`;
+    
+    if (data['52w_high']) {
+        elements.stat52wHigh.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data['52w_high']);
+    }
+    if (data['52w_low']) {
+        elements.stat52wLow.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data['52w_low']);
+    }
+    
+    const mktState = data.market_state || 'REGULAR';
+    elements.statMarketState.innerText = translate(mktState);
+    elements.statMarketState.className = mktState === 'REGULAR' ? 'stat-val state-active' : 'stat-val state-closed';
 }
 
 // Run the full AI Analysis flow
@@ -182,7 +263,7 @@ async function runMarketAnalysis() {
     
     isAnalyzing = true;
     elements.runBtn.disabled = true;
-    elements.runBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyzing...`;
+    elements.runBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang phân tích...`;
     
     // Transition UI states
     elements.emptyState.classList.add('hidden');
@@ -216,46 +297,21 @@ async function runMarketAnalysis() {
             elements.loadingState.classList.add('hidden');
             elements.resultsState.classList.remove('hidden');
             renderAnalysisResults(data);
-            showToast('Analysis completed!');
+            showToast('Đã hoàn thành phân tích thị trường!');
         } else {
-            throw new Error(data.error || 'Server returned an error');
+            throw new Error(data.error || 'Máy chủ trả về mã lỗi');
         }
     } catch (err) {
         clearInterval(stepInterval);
         console.error(err);
         elements.loadingState.classList.add('hidden');
         elements.emptyState.classList.remove('hidden');
-        showToast(`Error: ${err.message || 'Check connection / API keys'}`);
+        showToast(`Lỗi: ${err.message || 'Kiểm tra mạng / API key'}`);
     } finally {
         isAnalyzing = false;
         elements.runBtn.disabled = false;
-        elements.runBtn.innerHTML = `<i class="fa-solid fa-bolt"></i> Run Analysis`;
+        elements.runBtn.innerHTML = `<i class="fa-solid fa-bolt"></i> Chạy phân tích`;
     }
-}
-
-// Update Price display area
-function updatePriceUI(data) {
-    if (!data || data.error) return;
-    
-    const formattedPrice = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.price);
-    elements.livePrice.innerText = formattedPrice;
-    
-    const chgSign = data.change >= 0 ? '+' : '';
-    const chgPct = data.change_pct;
-    const formattedChg = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(data.change));
-    
-    elements.priceChange.className = data.change >= 0 ? 'price-change positive' : 'price-change negative';
-    elements.priceChange.innerHTML = `<i class="fa-solid ${data.change >= 0 ? 'fa-caret-up' : 'fa-caret-down'}"></i> ${chgSign}${chgPct}% (${chgSign}${formattedChg})`;
-    
-    if (data['52w_high']) {
-        elements.stat52wHigh.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data['52w_high']);
-    }
-    if (data['52w_low']) {
-        elements.stat52wLow.innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data['52w_low']);
-    }
-    
-    elements.statMarketState.innerText = data.market_state || 'REGULAR';
-    elements.statMarketState.className = data.market_state === 'REGULAR' ? 'stat-val state-active' : 'stat-val state-closed';
 }
 
 // Render dynamic results
@@ -284,10 +340,10 @@ function renderAnalysisResults(data) {
             status = 'Overbought';
             rsiClass = 'badge badge-sell';
         }
-        elements.rsiStatus.innerText = status;
+        elements.rsiStatus.innerText = translate(status);
         elements.rsiStatus.className = rsiClass;
         
-        elements.indRsi.innerText = status.toUpperCase();
+        elements.indRsi.innerText = translate(status).toUpperCase();
         elements.indRsi.className = rsiClass;
     }
     
@@ -299,10 +355,10 @@ function renderAnalysisResults(data) {
         elements.macdSignal.innerText = signal.toFixed(2);
         
         const isBullish = macd > signal;
-        elements.macdCrossover.innerText = isBullish ? 'Bullish Cross' : 'Bearish Cross';
+        elements.macdCrossover.innerText = isBullish ? 'Cắt nhau Tăng giá' : 'Cắt nhau Giảm giá';
         elements.macdCrossover.className = isBullish ? 'macd-status bullish' : 'macd-status bearish';
         
-        elements.indMacd.innerText = isBullish ? 'BULLISH' : 'BEARISH';
+        elements.indMacd.innerText = isBullish ? 'TĂNG GIÁ' : 'GIẢM GIÁ';
         elements.indMacd.className = isBullish ? 'badge badge-buy' : 'badge badge-sell';
     }
     
@@ -313,31 +369,30 @@ function renderAnalysisResults(data) {
         elements.bbLower.innerText = Math.round(bb.lower || 0).toLocaleString();
         elements.bbWidth.innerText = (bb.width || 0).toFixed(4);
         
-        // Calculate price position percentage inside bands
         const current = tv.price_data.current_price;
         const upper = bb.upper || current;
         const lower = bb.lower || current;
         let positionPct = 50;
         if (upper !== lower) {
             positionPct = ((current - lower) / (upper - lower)) * 100;
-            positionPct = Math.max(0, Math.min(100, positionPct)); // clamp 0-100
+            positionPct = Math.max(0, Math.min(100, positionPct));
         }
         elements.bbPosition.style.left = `${positionPct}%`;
         
-        let bbDesc = 'Neutral Bands';
-        if (bb.width < 0.02) bbDesc = 'Squeeze Alert (Low Vol)';
-        else if (positionPct > 90) bbDesc = 'Price testing Upper Band';
-        else if (positionPct < 10) bbDesc = 'Price testing Lower Band';
+        let bbDesc = 'Dải trung hòa';
+        if (bb.width < 0.02) bbDesc = 'Cảnh báo nén (Vol thấp)';
+        else if (positionPct > 90) bbDesc = 'Giá đang chạm Dải Trên';
+        else if (positionPct < 10) bbDesc = 'Giá đang chạm Dải Dưới';
         elements.bbDescription.innerText = bbDesc;
     }
     
     // ADX
     if (tv.adx) {
         const adx = tv.adx.adx || 0;
-        let adxText = 'WEAK TREND';
+        let adxText = 'XU HƯỚNG YẾU';
         let adxClass = 'badge badge-neutral';
         if (adx > 25) {
-            adxText = 'STRONG TREND';
+            adxText = 'XU HƯỚNG MẠNH';
             adxClass = 'badge badge-buy';
         }
         elements.indAdx.innerText = `${adxText} (${Math.round(adx)})`;
@@ -347,13 +402,13 @@ function renderAnalysisResults(data) {
     // Stochastic
     if (tv.stochastic) {
         const k = tv.stochastic.k || 50;
-        let stochText = 'NEUTRAL';
+        let stochText = 'TRUNG LẬP';
         let stochClass = 'badge badge-neutral';
         if (k < 20) {
-            stochText = 'OVERSOLD';
+            stochText = 'QUÁ BÁN';
             stochClass = 'badge badge-buy';
         } else if (k > 80) {
-            stochText = 'OVERBOUGHT';
+            stochText = 'QUÁ MUA';
             stochClass = 'badge badge-sell';
         }
         elements.indStoch.innerText = stochText;
@@ -363,30 +418,30 @@ function renderAnalysisResults(data) {
     // MAs / EMA
     if (tv.market_sentiment) {
         const rating = tv.market_sentiment.overall_rating || 0;
-        let ratingText = 'NEUTRAL';
+        let ratingText = 'TRUNG LẬP';
         let ratingClass = 'badge badge-neutral';
         
         if (rating > 0.5) {
-            ratingText = 'BULLISH';
+            ratingText = 'TĂNG GIÁ';
             ratingClass = 'badge badge-buy';
         } else if (rating < -0.5) {
-            ratingText = 'BEARISH';
+            ratingText = 'GIẢM GIÁ';
             ratingClass = 'badge badge-sell';
         }
         elements.indMa.innerText = ratingText;
         elements.indMa.className = ratingClass;
         
         // Overall TV Signal
-        const tvSigText = (tv.market_sentiment.buy_sell_signal || 'NEUTRAL').toUpperCase();
-        elements.tvSignal.innerText = tvSigText;
+        const tvSigText = tv.market_sentiment.buy_sell_signal || 'NEUTRAL';
+        elements.tvSignal.innerText = translate(tvSigText);
         elements.tvSignal.className = 'confluence-val ' + 
             (tvSigText.includes('BUY') ? 'strong-buy' : tvSigText.includes('SELL') ? 'strong-sell' : 'neutral');
     }
     
     // 3. Render Groq AI Analysis
     const ai = data.ai_analysis;
-    const verdict = (ai.decision || 'HOLD').toUpperCase();
-    elements.aiVerdict.innerText = verdict;
+    const verdict = ai.decision || 'HOLD';
+    elements.aiVerdict.innerText = translate(verdict);
     elements.aiVerdict.className = 'recommendation-badge ' + 
         (verdict.includes('STRONG BUY') ? 'strong-buy' : 
          verdict.includes('BUY') ? 'buy' : 
@@ -397,13 +452,13 @@ function renderAnalysisResults(data) {
     elements.aiConfidence.innerText = `${confidence}%`;
     elements.aiConfidenceFill.style.width = `${confidence}%`;
     
-    elements.aiJustification.innerText = ai.reasoning || ai.justification || 'No justification provided.';
+    elements.aiJustification.innerText = ai.reasoning || ai.justification || 'Không có tóm tắt lý do.';
     
     // Bullet points
     elements.bullishPoints.innerHTML = '';
     const bullPoints = ai.bullish_thesis_points || ai.bullish_thesis || [];
     if (bullPoints.length === 0) {
-        elements.bullishPoints.innerHTML = '<li>No specific bullish points found.</li>';
+        elements.bullishPoints.innerHTML = '<li>Không phát hiện luận điểm tăng giá cụ thể.</li>';
     } else {
         bullPoints.forEach(pt => {
             const li = document.createElement('li');
@@ -415,7 +470,7 @@ function renderAnalysisResults(data) {
     elements.bearishPoints.innerHTML = '';
     const bearPoints = ai.bearish_thesis_points || ai.bearish_thesis || [];
     if (bearPoints.length === 0) {
-        elements.bearishPoints.innerHTML = '<li>No specific bearish points found.</li>';
+        elements.bearishPoints.innerHTML = '<li>Không phát hiện luận điểm giảm giá cụ thể.</li>';
     } else {
         bearPoints.forEach(pt => {
             const li = document.createElement('li');
@@ -430,16 +485,16 @@ function renderAnalysisResults(data) {
     if (news.length === 0) {
         elements.newsContainer.innerHTML = `
             <div class="news-item">
-                <span class="news-time">No news found</span>
-                <span class="news-title">Could not fetch headlines for BTC at this time.</span>
+                <span class="news-time">Không có tin tức</span>
+                <span class="news-title">Không tìm thấy tin tức tiêu đề thị trường lúc này.</span>
             </div>
         `;
     } else {
         news.forEach(item => {
-            const timeStr = item.time || 'Recent';
-            const title = item.title || 'Headline';
+            const timeStr = item.time || 'Vừa xong';
+            const title = item.title || 'Tiêu đề';
             const link = item.link || '#';
-            const source = item.source || 'Finance News';
+            const source = item.source || 'Tin Tài Chính';
             
             const itemDiv = document.createElement('div');
             itemDiv.className = 'news-item';
