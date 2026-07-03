@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: btc-groq-mcp-analyzer
+    env: docker
+    plan: free
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PORT
+        value: 8000

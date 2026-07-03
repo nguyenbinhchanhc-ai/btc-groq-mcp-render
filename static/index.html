@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC AI Analytics Dashboard (TradingView MCP + Groq)</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar/Navbar -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon"><i class="fa-solid fa-brain-circuit"></i></div>
+                <div class="logo-text">
+                    <h1>BTC AI ANALYTICS</h1>
+                    <span>TradingView MCP &bull; Groq Hybrid Intel</span>
+                </div>
+            </div>
+            
+            <div class="header-controls">
+                <div class="status-badge" id="api-status">
+                    <span class="status-indicator yellow"></span>
+                    <span class="status-label">Checking API Key...</span>
+                </div>
+
+                <div class="timeframe-selector">
+                    <button class="tf-btn" data-tf="15m">15M</button>
+                    <button class="tf-btn active" data-tf="1h">1H</button>
+                    <button class="tf-btn" data-tf="4h">4H</button>
+                    <button class="tf-btn" data-tf="1D">1D</button>
+                </div>
+
+                <button class="settings-btn" id="open-settings">
+                    <i class="fa-solid fa-cog"></i> Settings
+                </button>
+
+                <button class="analyze-btn" id="run-analysis">
+                    <i class="fa-solid fa-bolt"></i> Run Analysis
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Layout -->
+        <main class="dashboard-grid">
+            
+            <!-- COLUMN 1: Market Ticker & Live Data -->
+            <section class="grid-item card-glass live-market-panel">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-chart-line text-blue"></i> Live Market Quote</h2>
+                    <span class="source-tag">Yahoo Finance</span>
+                </div>
+                <div class="market-quote-display">
+                    <div class="symbol-info">
+                        <span class="symbol-name">BTC-USD</span>
+                        <span class="exchange-name" id="market-exchange">BINANCE</span>
+                    </div>
+                    <div class="price-box">
+                        <span class="current-price" id="live-price">$ --,---.--</span>
+                        <span class="price-change positive" id="price-change">
+                            <i class="fa-solid fa-caret-up"></i> --.--% (+$---.--)
+                        </span>
+                    </div>
+                    <div class="market-stats">
+                        <div class="stat-row">
+                            <span class="stat-lbl">52W High</span>
+                            <span class="stat-val" id="stat-52w-high">$ --,---.--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-lbl">52W Low</span>
+                            <span class="stat-val" id="stat-52w-low">$ --,---.--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-lbl">Market State</span>
+                            <span class="stat-val state-active" id="stat-market-state">REGULAR</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-header mt-4">
+                    <h2><i class="fa-solid fa-gauge-high text-purple"></i> Technical Gauges</h2>
+                    <span class="source-tag">TradingView MCP</span>
+                </div>
+                <div class="gauges-container">
+                    <div class="gauge-box">
+                        <span class="gauge-name">RSI (14)</span>
+                        <div class="gauge-bar-wrapper">
+                            <div class="gauge-bar-value" id="rsi-val-bar" style="width: 50%;"></div>
+                            <div class="gauge-marker oversold">30</div>
+                            <div class="gauge-marker overbought">70</div>
+                        </div>
+                        <div class="gauge-meta">
+                            <span id="rsi-val">50.0</span>
+                            <span class="badge" id="rsi-status">Neutral</span>
+                        </div>
+                    </div>
+
+                    <div class="gauge-box">
+                        <span class="gauge-name">MACD Momentum</span>
+                        <div class="macd-display">
+                            <div class="macd-line-val">
+                                <span class="lbl">MACD</span>
+                                <span class="val" id="macd-line">--.--</span>
+                            </div>
+                            <div class="macd-signal-val">
+                                <span class="lbl">Signal</span>
+                                <span class="val" id="macd-signal">--.--</span>
+                            </div>
+                            <div class="macd-status" id="macd-crossover">--</div>
+                        </div>
+                    </div>
+
+                    <div class="gauge-box">
+                        <span class="gauge-name">Bollinger Bands</span>
+                        <div class="bb-status-box">
+                            <div class="bb-channel">
+                                <div class="bb-band upper">Upper: <span id="bb-upper">$--,---</span></div>
+                                <div class="bb-price-position" id="bb-position" style="left: 50%;"></div>
+                                <div class="bb-band lower">Lower: <span id="bb-lower">$--,---</span></div>
+                            </div>
+                            <div class="bb-meta">
+                                <span>BB Width: <span id="bb-width">-.--</span></span>
+                                <span id="bb-description">Neutral squeeze</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUMN 2: AI Verdict & Analysis (Groq) -->
+            <section class="grid-item card-glass ai-analysis-panel">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-robot text-cyan"></i> Groq AI Market Verdict</h2>
+                    <span class="model-tag" id="active-model">llama-3.3-70b-versatile</span>
+                </div>
+
+                <!-- Analysis Initial/Empty State -->
+                <div class="analysis-empty-state" id="analysis-empty">
+                    <div class="empty-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <h3>Ready to Analyze BTC</h3>
+                    <p>Select your timeframe and click the "Run Analysis" button above to fetch TradingView MCP data and run Groq AI intelligence.</p>
+                </div>
+
+                <!-- Analysis Loading State -->
+                <div class="analysis-loading-state hidden" id="analysis-loading">
+                    <div class="loading-ring"><div></div><div></div><div></div><div></div></div>
+                    <h3>Ingesting Market Confluence</h3>
+                    <p class="loading-step" id="loading-step">Connecting to TradingView MCP...</p>
+                </div>
+
+                <!-- Analysis Content Area -->
+                <div class="analysis-content hidden" id="analysis-results">
+                    <div class="verdict-header">
+                        <div class="recommendation-badge" id="ai-verdict">HOLD</div>
+                        <div class="confidence-container">
+                            <div class="confidence-header">
+                                <span>AI Confidence</span>
+                                <span id="ai-confidence">0%</span>
+                            </div>
+                            <div class="confidence-progress-bar">
+                                <div class="progress-fill" id="ai-confidence-fill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="justification-box">
+                        <h3>Summary Justification</h3>
+                        <p id="ai-justification">No analysis run yet.</p>
+                    </div>
+
+                    <div class="thesis-columns">
+                        <div class="thesis-col bullish-thesis">
+                            <h3><i class="fa-solid fa-circle-chevron-up text-green"></i> Bullish Thesis</h3>
+                            <ul id="bullish-points">
+                                <li>Waiting for run...</li>
+                            </ul>
+                        </div>
+                        <div class="thesis-col bearish-thesis">
+                            <h3><i class="fa-solid fa-circle-chevron-down text-red"></i> Bearish Thesis</h3>
+                            <ul id="bearish-points">
+                                <li>Waiting for run...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUMN 3: Indicators Checklist & News Sentiment -->
+            <section class="grid-item card-glass checklist-news-panel">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-square-check text-green"></i> Technical Confluence</h2>
+                    <span class="source-tag">TradingView Summary</span>
+                </div>
+                <div class="technical-confluence-summary">
+                    <div class="confluence-rating">
+                        <span class="confluence-lbl">Overall TV Signal</span>
+                        <span class="confluence-val" id="tv-signal">NEUTRAL</span>
+                    </div>
+                    <div class="indicators-grid" id="indicators-grid">
+                        <div class="indicator-row">
+                            <span>RSI(14) Momentum</span>
+                            <span class="badge badge-neutral" id="ind-rsi">NEUTRAL</span>
+                        </div>
+                        <div class="indicator-row">
+                            <span>MACD Crossover</span>
+                            <span class="badge badge-neutral" id="ind-macd">NEUTRAL</span>
+                        </div>
+                        <div class="indicator-row">
+                            <span>Stochastic Oscillator</span>
+                            <span class="badge badge-neutral" id="ind-stoch">NEUTRAL</span>
+                        </div>
+                        <div class="indicator-row">
+                            <span>ADX Trend Strength</span>
+                            <span class="badge badge-neutral" id="ind-adx">NEUTRAL</span>
+                        </div>
+                        <div class="indicator-row">
+                            <span>EMA(20) / SMA(20)</span>
+                            <span class="badge badge-neutral" id="ind-ma">NEUTRAL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-header mt-4">
+                    <h2><i class="fa-solid fa-newspaper text-cyan"></i> Market News & Headlines</h2>
+                    <span class="source-tag">RSS feeds</span>
+                </div>
+                <div class="news-list" id="news-container">
+                    <div class="news-item">
+                        <span class="news-time">Just now</span>
+                        <a href="#" class="news-title">Click Run Analysis to fetch latest market news headlines</a>
+                        <span class="news-source">System</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div class="modal-overlay hidden" id="settings-modal">
+        <div class="modal card-glass">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-sliders text-cyan"></i> Settings & Keys</h2>
+                <button class="close-btn" id="close-settings"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="groq-api-key">Groq API Key</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-key"></i>
+                        <input type="password" id="groq-api-key" placeholder="gsk_...">
+                    </div>
+                    <small>Stored locally in your browser's LocalStorage. Never saved on the server unless you set it as an env variable.</small>
+                </div>
+                <div class="form-group">
+                    <label for="groq-model">Groq Model</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-microchip"></i>
+                        <select id="groq-model">
+                            <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Recommended)</option>
+                            <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant</option>
+                            <option value="mixtral-8x7b-32768">Mixtral 8x7B 32k</option>
+                            <option value="gemma2-9b-it">Gemma 2 9B IT</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="cancel-settings">Cancel</button>
+                    <button class="btn btn-primary" id="save-settings">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div class="toast hidden" id="toast">
+        <i class="fa-solid fa-circle-info"></i> <span id="toast-message">Notification message here</span>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
