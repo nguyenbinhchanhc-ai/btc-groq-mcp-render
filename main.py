@@ -167,14 +167,19 @@ def analyze_with_groq(api_key: str, model: str, price: dict, tv: dict, news: lis
         api_key=api_key
     )
 
-    current_price = price.get("price", 60000.0)
-    sr = tv.get("support_resistance", {})
-    pivot = sr.get("pivot", current_price)
-    r1 = sr.get("resistance_1", current_price + 500)
-    r2 = sr.get("resistance_2", current_price + 1000)
-    s1 = sr.get("support_1", current_price - 500)
-    s2 = sr.get("support_2", current_price - 1000)
-    atr_val = tv.get("atr", {}).get("value", 300.0)
+    current_price = price.get("price") or 60000.0
+    sr = tv.get("support_resistance") or {}
+    pivot = sr.get("pivot") or current_price
+    r1 = sr.get("resistance_1") or (current_price + 500)
+    r2 = sr.get("resistance_2") or (current_price + 1000)
+    s1 = sr.get("support_1") or (current_price - 500)
+    s2 = sr.get("support_2") or (current_price - 1000)
+    
+    # Safe guard ATR volatility to ensure it is never None or 0
+    atr_val = tv.get("atr") or {}
+    atr_val = atr_val.get("value")
+    if atr_val is None or atr_val == 0:
+        atr_val = 300.0
 
     # Prepare data details for the prompt
     price_info = f"""
@@ -275,7 +280,7 @@ Please analyze this market data for Bitcoin:
 - If you predict a BULLISH price target, choose a target price between {current_price} and {r2} (usually near {r1} or {r2}). It must be a specific value like {current_price + 230} or similar based on indicators.
 - If you predict a BEARISH price target, choose a target price between {s2} and {current_price} (usually near {s1} or {s2}). It must be a specific value like {current_price - 270} or similar.
 - Calculate the target countdown minutes (target_timeframe_minutes) based on: (abs(target_price - {current_price}) / {atr_val}) * 60 minutes.
-- Example calculation: If target_price = {current_price + 300} and ATR = {atr_val}, then minutes = (300 / {atr_val}) * 60 = {int((300 / atr_val) * 60)} minutes.
+- Example calculation: If target_price is 300 USD away from current price, and ATR is 150 USD, then minutes = (300 / 150) * 60 = 120 minutes.
 - The 'target_timeframe_minutes' MUST be an exact integer and MUST change dynamically on every tick according to the formula.
 """
 
