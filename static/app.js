@@ -139,17 +139,21 @@ document.addEventListener('DOMContentLoaded', () => {
     checkApiKeyStatus();
     setupEventListeners();
     
-    // Initial fetches
+    // Initial fetch of price
     fetchQuoteOnly();
-    fetchTechnicalsOnly(); // Initial indicators load
+    
+    // Wait 1.2 seconds and execute the first AI analysis automatically
+    setTimeout(() => {
+        runMarketAnalysis();
+    }, 1200);
     
     // Polling 1: Price quote updates every 5 seconds
     setInterval(() => {
         fetchQuoteOnly();
     }, 5000);
     
-    // Polling 2: Countdown clock for technical indicators (30s)
-    startTechnicalTimer();
+    // Polling 2: Automatic loop to recalculate AI probabilities and targets every 30 seconds
+    startAILoopTimer();
 });
 
 // Setup Event Listeners
@@ -165,15 +169,16 @@ function setupEventListeners() {
             const tfNames = { '15m': '15 phút', '1h': '1 giờ', '4h': '4 giờ', '1D': '1 ngày' };
             showToast(`Khung thời gian chuyển sang ${tfNames[currentTimeframe]}`);
             
-            // Re-fetch technicals instantly on timeframe change
-            fetchTechnicalsOnly();
-            resetTechnicalTimer();
+            // Re-fetch indicators and probabilities instantly on timeframe change
+            runMarketAnalysis();
+            resetAILoopTimer();
         });
     });
 
-    // Run analysis button
+    // Run analysis button (Manual override)
     elements.runBtn.addEventListener('click', () => {
         runMarketAnalysis();
+        resetAILoopTimer();
     });
 
     // Settings modal open
@@ -204,6 +209,10 @@ function setupEventListeners() {
         checkApiKeyStatus();
         elements.settingsModal.classList.add('hidden');
         showToast('Đã lưu cấu hình thành công!');
+        
+        // Trigger run instantly with new API key
+        runMarketAnalysis();
+        resetAILoopTimer();
     });
 }
 
@@ -236,24 +245,24 @@ function showToast(message) {
     }, 3000);
 }
 
-// Polling Timer for Technicals
-function startTechnicalTimer() {
+// Polling Timer for Auto-Calculation
+function startAILoopTimer() {
     countdownSeconds = 30;
-    elements.updateCountdown.innerText = `Cập nhật tự động sau: ${countdownSeconds}s`;
+    elements.updateCountdown.innerText = `Tự động cập nhật sau: ${countdownSeconds}s`;
     
     if (countdownInterval) clearInterval(countdownInterval);
     countdownInterval = setInterval(() => {
         countdownSeconds--;
         if (countdownSeconds <= 0) {
             countdownSeconds = 30;
-            fetchTechnicalsOnly();
+            runMarketAnalysis(); // Triggers full AI analysis automatically!
         }
-        elements.updateCountdown.innerText = `Cập nhật tự động sau: ${countdownSeconds}s`;
+        elements.updateCountdown.innerText = `Tự động cập nhật sau: ${countdownSeconds}s`;
     }, 1000);
 }
 
-function resetTechnicalTimer() {
-    startTechnicalTimer();
+function resetAILoopTimer() {
+    startAILoopTimer();
 }
 
 // Fetch live price quote only
@@ -306,22 +315,6 @@ function updatePriceUI(data) {
     const mktState = data.market_state || 'REGULAR';
     elements.statMarketState.innerText = translate(mktState);
     elements.statMarketState.className = mktState === 'REGULAR' ? 'stat-val state-active' : 'stat-val state-closed';
-}
-
-// Fetch raw Technical Indicators data only (Lightweight)
-async function fetchTechnicalsOnly() {
-    try {
-        const response = await fetch(`/api/technicals?symbol=BTCUSDT&exchange=BINANCE&timeframe=${currentTimeframe}`);
-        const data = await response.json();
-        
-        if (response.ok && !data.error) {
-            updatePriceUI(data.price_details);
-            renderSupportResistance(data.technical_details.support_resistance);
-            renderIndicatorsTable(data.technical_details);
-        }
-    } catch (e) {
-        console.error('Failed to poll technical data', e);
-    }
 }
 
 // Render Support & Resistance levels panel
@@ -492,12 +485,16 @@ async function runMarketAnalysis() {
     
     isAnalyzing = true;
     elements.runBtn.disabled = true;
-    elements.runBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tính toán...`;
+    elements.runBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tính...`;
     
-    // Transition UI states
-    elements.emptyState.classList.add('hidden');
-    elements.resultsState.classList.add('hidden');
-    elements.loadingState.classList.remove('hidden');
+    // Only show loading spinner on the very first load
+    const hasExistingResults = !elements.resultsState.classList.contains('hidden');
+    if (!hasExistingResults) {
+        elements.emptyState.classList.add('hidden');
+        elements.loadingState.classList.remove('hidden');
+    } else {
+        elements.updateCountdown.innerText = "Đang phân tích lại...";
+    }
     
     // Animate loading step texts
     let stepIdx = 0;
@@ -529,19 +526,23 @@ async function runMarketAnalysis() {
             // Render technical sections instantly with newest data
             renderSupportResistance(data.technical_details.support_resistance);
             renderIndicatorsTable(data.technical_details);
-            resetTechnicalTimer();
             
             // Render Groq AI results
             renderAIResults(data);
-            showToast('Đã hoàn thành phân tích toán học & mục tiêu!');
+            showToast('Tính toán xác suất & mục tiêu thành công!');
         } else {
             throw new Error(data.error || 'Máy chủ trả về mã lỗi');
         }
     } catch (err) {
         clearInterval(stepInterval);
         console.error(err);
-        elements.loadingState.classList.add('hidden');
-        elements.emptyState.classList.remove('hidden');
+        
+        // If first load failed, show empty state, otherwise keep old results and show error
+        if (!hasExistingResults) {
+            elements.loadingState.classList.add('hidden');
+            elements.emptyState.classList.remove('hidden');
+        }
+        
         showToast(`Lỗi: ${err.message || 'Kiểm tra mạng / API key'}`);
     } finally {
         isAnalyzing = false;
