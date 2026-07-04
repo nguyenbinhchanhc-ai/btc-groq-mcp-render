@@ -277,11 +277,11 @@ Please analyze this market data for Bitcoin:
 - SUPPORT LEVELS: S1={s1}, S2={s2}. RESISTANCE LEVELS: R1={r1}, R2={r2}.
 - ATR VOLATILITY: {atr_val} USD.
 - DO NOT copy the examples in the system prompt instructions.
-- If you predict a BULLISH price target, choose a target price between {current_price} and {r2} (usually near {r1} or {r2}). It must be a specific value like {current_price + 230} or similar based on indicators.
-- If you predict a BEARISH price target, choose a target price between {s2} and {current_price} (usually near {s1} or {s2}). It must be a specific value like {current_price - 270} or similar.
-- Calculate the target countdown minutes (target_timeframe_minutes) based on: (abs(target_price - {current_price}) / {atr_val}) * 60 minutes.
-- Example calculation: If target_price is 300 USD away from current price, and ATR is 150 USD, then minutes = (300 / 150) * 60 = 120 minutes.
-- The 'target_timeframe_minutes' MUST be an exact integer and MUST change dynamically on every tick according to the formula.
+- CẤM TUYỆT ĐỐI không được trả về giá trị trùng khít hoàn toàn với các mức R1={r1}, R2={r2}, S1={s1}, S2={s2} hay Pivot={pivot}.
+- Target Price (target_price) phải là một số lẻ thập phân cụ thể di động liên tục theo giá hiện tại (ví dụ: {current_price + 314.50} hoặc {current_price - 245.20} dựa trên tín hiệu).
+- Nếu bạn đoán xu hướng TĂNG (BULLISH), hãy chọn target_price lớn hơn {current_price} nhưng nhỏ hơn {r2}.
+- Nếu bạn đoán xu hướng GIẢM (BEARISH), hãy chọn target_price nhỏ hơn {current_price} nhưng lớn hơn {s2}.
+- Số target_price này phải thay đổi linh hoạt theo từng yêu cầu chứ không được cố định một mức duy nhất.
 """
 
     response = client.chat.completions.create(
