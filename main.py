@@ -167,9 +167,18 @@ def analyze_with_groq(api_key: str, model: str, price: dict, tv: dict, news: lis
         api_key=api_key
     )
 
+    current_price = price.get("price", 60000.0)
+    sr = tv.get("support_resistance", {})
+    pivot = sr.get("pivot", current_price)
+    r1 = sr.get("resistance_1", current_price + 500)
+    r2 = sr.get("resistance_2", current_price + 1000)
+    s1 = sr.get("support_1", current_price - 500)
+    s2 = sr.get("support_2", current_price - 1000)
+    atr_val = tv.get("atr", {}).get("value", 300.0)
+
     # Prepare data details for the prompt
     price_info = f"""
-Current price: {price.get('price')} USD
+Current price: {current_price} USD
 Change 24h: {price.get('change_pct')}% ({price.get('change')} USD)
 52W High: {price.get('52w_high')}, 52W Low: {price.get('52w_low')}
 """
@@ -191,7 +200,7 @@ TradingView Signals (Interval: {tv.get('timeframe')}):
 - Volume analysis: {tv.get('volume_analysis', {})}
 - ADX trend strength: {tv.get('adx', {}).get('value', 'N/A')} ({tv.get('adx', {}).get('trend_strength', 'N/A')})
 - Stochastic: {tv.get('stochastic', {})}
-- Support/Resistance: {tv.get('support_resistance', {})}
+- Support/Resistance: {sr}
 """
 
     news_info = ""
@@ -219,9 +228,9 @@ CRITICAL INSTRUCTIONS FOR PROBABILITY CALCULATION:
 - The probability percentage for the dominant side must be between 40% and 100%.
 
 CRITICAL INSTRUCTION FOR TIMEFRAME COUNTDOWN:
-- You must predict how long (in minutes) it will take to reach the predicted 'target_price' based on current price, distance to target, and ATR volatility.
-- Return this prediction in the 'target_timeframe_minutes' key as an exact integer (e.g. 45, 90, 180, 240). Do not use ranges here.
-- Also return a friendly text representation in the 'target_timeframe' key (e.g. "trong vòng 1.5 giờ", "trong 3 giờ tới").
+- Calculate the target countdown minutes (target_timeframe_minutes) using the formula: (abs(target_price - current_price) / ATR) * 60 minutes.
+- Return this prediction in the 'target_timeframe_minutes' key as an exact integer. Do not make it static (e.g. do not just return 90).
+- Also return a friendly text representation in the 'target_timeframe' key (e.g. "trong vòng 45 phút", "trong 3 giờ tới").
 
 The JSON must contain exactly these keys:
 {
@@ -229,9 +238,9 @@ The JSON must contain exactly these keys:
   "confidence": <integer between 0 and 100>,
   "probability_bullish": <integer representing probability percentage of upward movement, e.g., 61>,
   "probability_bearish": <integer representing probability percentage of downward movement, e.g., 39 (sum must equal 100)>,
-  "target_price": <float representing specific target price BTC will run to next, e.g., 63450.0>,
-  "target_timeframe": "<string representing expected time, e.g. 'trong vòng 1.5 giờ'>",
-  "target_timeframe_minutes": <integer representing minutes to target for the live countdown, e.g. 90>,
+  "target_price": <float representing specific target price BTC will run to next>,
+  "target_timeframe": "<string representing expected time>",
+  "target_timeframe_minutes": <integer representing minutes to target for the live countdown>,
   "reasoning": "<Tóm tắt nhận định bằng tiếng Việt (2-3 câu)>",
   "bullish_thesis_points": [
     "<Luận điểm tăng giá 1 bằng tiếng Việt>",
@@ -257,6 +266,17 @@ Please analyze this market data for Bitcoin:
 
 [Recent News Headlines]
 {news_info}
+
+[CRITICAL MATHEMATICAL CONSTRAINTS]
+- CURRENT PRICE OF BTC IS: {current_price} USD.
+- SUPPORT LEVELS: S1={s1}, S2={s2}. RESISTANCE LEVELS: R1={r1}, R2={r2}.
+- ATR VOLATILITY: {atr_val} USD.
+- DO NOT copy the examples in the system prompt instructions.
+- If you predict a BULLISH price target, choose a target price between {current_price} and {r2} (usually near {r1} or {r2}). It must be a specific value like {current_price + 230} or similar based on indicators.
+- If you predict a BEARISH price target, choose a target price between {s2} and {current_price} (usually near {s1} or {s2}). It must be a specific value like {current_price - 270} or similar.
+- Calculate the target countdown minutes (target_timeframe_minutes) based on: (abs(target_price - {current_price}) / {atr_val}) * 60 minutes.
+- Example calculation: If target_price = {current_price + 300} and ATR = {atr_val}, then minutes = (300 / {atr_val}) * 60 = {int((300 / atr_val) * 60)} minutes.
+- The 'target_timeframe_minutes' MUST be an exact integer and MUST change dynamically on every tick according to the formula.
 """
 
     response = client.chat.completions.create(
