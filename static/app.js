@@ -345,17 +345,15 @@ function renderIndicatorsTable(tv) {
     const rsi = tv.rsi || {};
     const macd = tv.macd || {};
     const stoch = tv.stochastic || {};
-    const stochRsi = tv.stochastic_rsi || {};
     const adx = tv.adx || {};
     const bb = tv.bollinger_bands || {};
     const atr = tv.atr || {};
     const vol = tv.volume_analysis || {};
     const sma = tv.sma || {};
     const ema = tv.ema || {};
-    const cci = tv.cci || {};
-    const wr = tv.williams_r || {};
-    const ao = tv.awesome_oscillator || {};
-    const mom = tv.momentum || {};
+    const obv = tv.obv || {};
+    const struct = tv.market_structure || {};
+    const sentiment = tv.market_sentiment || {};
 
     const indicatorsData = [
         {
@@ -380,39 +378,11 @@ function renderIndicatorsTable(tv) {
             desc: stoch.signal === 'Oversold' ? 'Stoch chạm vùng quá bán' : stoch.signal === 'Overbought' ? 'Stoch chạm vùng quá mua' : 'Dao động Stoch ở vùng trung hòa'
         },
         {
-            group: 'Động lượng',
-            name: 'Stochastic RSI',
-            val: `%K: ${(stochRsi.k || 0).toFixed(2)}`,
-            sig: translate(stochRsi.signal),
-            desc: 'Kết hợp RSI và Stochastic xác định động lượng đảo chiều cực nhạy'
-        },
-        {
-            group: 'Động lượng',
-            name: 'Awesome Oscillator (AO)',
-            val: (ao.value || 0).toFixed(2),
-            sig: translate(ao.signal),
-            desc: (ao.signal || '').includes('Bullish') ? 'Động lượng AO chuyển sang dương' : 'Động lượng AO chuyển sang âm'
-        },
-        {
-            group: 'Động lượng',
-            name: 'Momentum (MOM)',
-            val: (mom.value || 0).toFixed(2),
-            sig: translate(mom.signal),
-            desc: (mom.signal || '').includes('Bullish') ? 'Tốc độ tăng giá đang gia tăng' : 'Tốc độ giảm giá đang gia tăng'
-        },
-        {
-            group: 'Động lượng',
-            name: 'Williams %R',
-            val: (wr.value || 0).toFixed(2),
-            sig: translate(wr.signal),
-            desc: 'Đo lường mức độ quá mua/quá bán từ đỉnh/đáy lịch sử'
-        },
-        {
             group: 'Xu hướng',
             name: 'Chỉ số ADX (14)',
             val: (adx.value || 0).toFixed(2),
             sig: translate(adx.trend_strength),
-            desc: `Độ mạnh xu hướng: ${translate(adx.trend_strength)}. (+DI: ${adx.plus_di || 0} | -DI: ${adx.minus_di || 0})`
+            desc: `Đo lường xu hướng: ${translate(adx.trend_strength)}. (+DI: ${adx.plus_di || 0} | -DI: ${adx.minus_di || 0})`
         },
         {
             group: 'Xu hướng',
@@ -454,7 +424,28 @@ function renderIndicatorsTable(tv) {
             name: 'Khối lượng giao dịch (Vol)',
             val: Math.round(vol.current || 0).toLocaleString(),
             sig: translate(vol.signal),
-            desc: `Vol hiện tại bằng ${vol.ratio || 0} lần Vol trung bình 20 ngày (${Math.round(vol.average_20 || 0).toLocaleString()})`
+            desc: `Khối lượng hiện tại: ${Math.round(vol.current || 0).toLocaleString()} (Trạng thái: ${translate(vol.signal)})`
+        },
+        {
+            group: 'Khối lượng',
+            name: 'Tích lũy / Phân phối (OBV)',
+            val: obv.current_volume !== undefined ? Math.round(obv.current_volume).toLocaleString() : '--',
+            sig: translate(obv.direction),
+            desc: obv.note || 'Xu hướng dòng tiền dựa trên khối lượng tích lũy.'
+        },
+        {
+            group: 'Cấu trúc',
+            name: 'Cấu trúc Thị trường',
+            val: translate(struct.trend),
+            sig: translate(struct.trend_strength),
+            desc: struct.trend_signals ? struct.trend_signals.join(', ') : 'Xác định cấu trúc chuyển động giá.'
+        },
+        {
+            group: 'Đồng thuận',
+            name: 'Đồng thuận Kỹ thuật TV',
+            val: sentiment.overall_rating !== undefined ? sentiment.overall_rating : '--',
+            sig: translate(sentiment.buy_sell_signal),
+            desc: `Động lượng: ${translate(sentiment.momentum)} | Biến động: ${translate(sentiment.volatility)}`
         }
     ];
 
@@ -572,7 +563,9 @@ function renderAIResults(data) {
          
     const confidence = ai.confidence || 0;
     elements.aiConfidence.innerText = `${confidence}%`;
-    elements.aiConfidenceFill.style.width = `${confidence}%`;
+    if (elements.aiConfidenceFill) {
+        elements.aiConfidenceFill.style.width = `${confidence}%`;
+    }
     
     // 2. Mathematical targets
     const targetVal = ai.target_price || 0;
