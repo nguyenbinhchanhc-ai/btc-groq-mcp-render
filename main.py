@@ -93,16 +93,23 @@ async def run_analysis(
     3. Retrieve recent news headlines from crypto feeds
     4. Compile data and send to Groq AI for an expert trading recommendation
     """
-    # Determine the Groq API key (Header first, then Env Var)
-    api_key = x_groq_api_key or os.getenv("GROQ_API_KEY")
+    # Safe check in case parameter helpers are passed directly in python calls
+    api_key = x_groq_api_key
+    if not isinstance(api_key, str) and hasattr(api_key, "default"):
+        api_key = None
+    
+    api_key = api_key or os.getenv("GROQ_API_KEY")
     if not api_key:
         raise HTTPException(
             status_code=400,
             detail="Groq API Key is missing. Please save it in settings or set GROQ_API_KEY environment variable on the server."
         )
 
-    # Determine Groq Model
-    model = x_groq_model or os.getenv("GROQ_MODEL") or "llama-3.3-70b-versatile"
+    # Determine Groq Model safely
+    model = x_groq_model
+    if not isinstance(model, str) and hasattr(model, "default"):
+        model = None
+    model = model or os.getenv("GROQ_MODEL") or "llama-3.3-70b-versatile"
 
     try:
         # Step 1: Yahoo price
@@ -114,8 +121,14 @@ async def run_analysis(
         if "error" in tv_details:
             raise Exception(f"TradingView analysis failed: {tv_details['error']}")
             
-        # Step 3: News
-        news_details = fetch_news(symbol="BTC", category="crypto", limit=5)
+        # Step 3: News (wrapped with a 3.0s timeout to prevent hanging on slow RSS feeds)
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(fetch_news, symbol="BTC", category="crypto", limit=5)
+            try:
+                news_details = future.result(timeout=3.0)
+            except concurrent.futures.TimeoutError:
+                news_details = []
         
         # Step 4: AI Analysis using Groq
         ai_verdict = analyze_with_groq(api_key, model, price_details, tv_details, news_details)

@@ -128,9 +128,9 @@ const textMap = {
 };
 
 function translate(text) {
-    if (!text) return '--';
-    const cleanText = text.trim();
-    return textMap[cleanText] || textMap[cleanText.toUpperCase()] || cleanText;
+    if (text === null || text === undefined) return '--';
+    const strText = String(text).trim();
+    return textMap[strText] || textMap[strText.toUpperCase()] || strText;
 }
 
 // Initialize application
@@ -513,7 +513,8 @@ async function runMarketAnalysis() {
                 'Content-Type': 'application/json',
                 'X-Groq-Api-Key': apiKey,
                 'X-Groq-Model': currentModel
-            }
+            },
+            body: JSON.stringify({})
         });
         
         clearInterval(stepInterval);
