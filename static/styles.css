@@ -1112,3 +1112,292 @@ body {
     100% { color: #ffffff; text-shadow: 0 0 15px rgba(255, 255, 255, 0.1); transform: scale(1); }
 }
 
+/* 2-Column Dashboard Layout */
+.dashboard-grid-2col {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 24px;
+    flex: 1;
+}
+
+@media (max-width: 1100px) {
+    .dashboard-grid-2col {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.dashboard-main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.panel-padding {
+    padding: 20px;
+}
+
+/* Support/Resistance Level Display */
+.sr-levels-display {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sr-metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.sr-metric-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+}
+
+.sr-metric-box.resistance {
+    border-left: 3px solid var(--neon-red);
+}
+
+.sr-metric-box.support {
+    border-left: 3px solid var(--neon-green);
+}
+
+.sr-metric-box .lbl {
+    font-size: 9px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.sr-metric-box .val {
+    font-family: var(--font-outfit);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.sr-metric-box .dist {
+    font-size: 10px;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.sr-metric-box.resistance .dist { color: var(--neon-red); }
+.sr-metric-box.support .dist { color: var(--neon-green); }
+
+.sr-table-wrapper {
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.sr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.sr-table th, .sr-table td {
+    padding: 8px 12px;
+    text-align: left;
+}
+
+.sr-table th {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.sr-table td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.sr-table tr.tr-res td {
+    color: rgba(255, 59, 48, 0.85);
+}
+
+.sr-table tr.tr-supp td {
+    color: rgba(52, 199, 89, 0.85);
+}
+
+.sr-table tr.tr-pivot td {
+    color: var(--neon-yellow);
+    font-weight: 600;
+    background: rgba(255, 204, 0, 0.02);
+}
+
+/* AI Verdict Metrics Grid */
+.ai-metrics-grid {
+    display: grid;
+    grid-template-columns: 200px 240px 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 820px) {
+    .ai-metrics-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ai-metric-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-glass);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+}
+
+.ai-metric-card .card-lbl {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.verdict-card {
+    align-items: center;
+    text-align: center;
+}
+
+.verdict-card .confidence-text {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.target-price-display {
+    font-family: var(--font-outfit);
+    font-size: 26px;
+    font-weight: 800;
+    color: #ffffff;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.timeframe-text {
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Probability Bars styling */
+.prob-bars-display {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.prob-percentage {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-outfit);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.bullish-pct { color: var(--neon-green); }
+.bearish-pct { color: var(--neon-red); }
+
+.prob-progress-bar {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+}
+
+.prob-fill-bullish {
+    height: 100%;
+    background: linear-gradient(90deg, #1fa2ff 0%, var(--neon-green) 100%);
+    transition: width 0.8s ease-out;
+}
+
+.prob-fill-bearish {
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon-red) 0%, #ff512f 100%);
+    transition: width 0.8s ease-out;
+}
+
+/* Technical Indicators Statistics Table */
+.update-countdown-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    border: 1px solid rgba(90, 200, 250, 0.2);
+    background: rgba(90, 200, 250, 0.04);
+    padding: 4px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+}
+
+.indicators-table-wrapper {
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid var(--border-glass);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.indicators-stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    text-align: left;
+}
+
+.indicators-stats-table th, .indicators-stats-table td {
+    padding: 10px 14px;
+}
+
+.indicators-stats-table th {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.indicators-stats-table td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.indicators-stats-table tbody tr:hover td {
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.indicators-stats-table tbody tr td:first-child {
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.indicators-stats-table tbody tr td:nth-child(2) {
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.indicators-stats-table tbody tr td:nth-child(3) {
+    font-family: var(--font-outfit);
+}
+
+

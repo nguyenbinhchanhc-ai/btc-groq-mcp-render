@@ -3,6 +3,8 @@ let currentModel = localStorage.getItem('groq-model') || 'llama-3.3-70b-versatil
 let currentTimeframe = '1h';
 let isAnalyzing = false;
 let lastFetchedPrice = 0;
+let countdownSeconds = 30;
+let countdownInterval = null;
 
 // DOM Elements
 const elements = {
@@ -30,35 +32,37 @@ const elements = {
     stat52wLow: document.getElementById('stat-52w-low'),
     statMarketState: document.getElementById('stat-market-state'),
     
-    // Gauges
-    rsiVal: document.getElementById('rsi-val'),
-    rsiValBar: document.getElementById('rsi-val-bar'),
-    rsiStatus: document.getElementById('rsi-status'),
-    macdLine: document.getElementById('macd-line'),
-    macdSignal: document.getElementById('macd-signal'),
-    macdCrossover: document.getElementById('macd-crossover'),
-    bbUpper: document.getElementById('bb-upper'),
-    bbLower: document.getElementById('bb-lower'),
-    bbWidth: document.getElementById('bb-width'),
-    bbPosition: document.getElementById('bb-position'),
-    bbDescription: document.getElementById('bb-description'),
-    
+    // S/R Levels
+    nearRes: document.getElementById('near-res'),
+    resDist: document.getElementById('res-dist'),
+    nearSupp: document.getElementById('near-supp'),
+    suppDist: document.getElementById('supp-dist'),
+    srR3: document.getElementById('sr-r3'),
+    srR2: document.getElementById('sr-r2'),
+    srR1: document.getElementById('sr-r1'),
+    srPv: document.getElementById('sr-pv'),
+    srS1: document.getElementById('sr-s1'),
+    srS2: document.getElementById('sr-s2'),
+    srS3: document.getElementById('sr-s3'),
+
     // AI Results
     aiVerdict: document.getElementById('ai-verdict'),
     aiConfidence: document.getElementById('ai-confidence'),
     aiConfidenceFill: document.getElementById('ai-confidence-fill'),
+    aiTargetPrice: document.getElementById('ai-target-price'),
+    aiTargetTimeframe: document.getElementById('ai-target-timeframe'),
+    bullishPct: document.getElementById('bullish-pct'),
+    bearishPct: document.getElementById('bearish-pct'),
+    probFillBull: document.getElementById('prob-fill-bull'),
+    probFillBear: document.getElementById('prob-fill-bear'),
     aiJustification: document.getElementById('ai-justification'),
     bullishPoints: document.getElementById('bullish-points'),
     bearishPoints: document.getElementById('bearish-points'),
     
-    // Confluence
-    tvSignal: document.getElementById('tv-signal'),
-    indRsi: document.getElementById('ind-rsi'),
-    indMacd: document.getElementById('ind-macd'),
-    indStoch: document.getElementById('ind-stoch'),
-    indAdx: document.getElementById('ind-adx'),
-    indMa: document.getElementById('ind-ma'),
-    
+    // Indicators Table
+    indicatorsTableBody: document.getElementById('indicators-table-body'),
+    updateCountdown: document.getElementById('update-countdown'),
+
     // News
     newsContainer: document.getElementById('news-container'),
     
@@ -70,12 +74,12 @@ const elements = {
 // Loading step text sequences in Vietnamese
 const loadingSteps = [
     "Đang kết nối tới TradingView MCP...",
-    "Truy vấn sổ lệnh Binance thời gian thực...",
-    "Lấy dữ liệu biến động lịch sử Yahoo Finance...",
-    "Truy xuất tin tức thị trường cryptocurrency mới nhất...",
-    "Tính toán các chỉ báo (RSI, MACD, Bollinger Bands)...",
-    "Chạy lập luận đa tác nhân trên AI Groq...",
-    "Tổng hợp đề xuất giao dịch đồng thuận..."
+    "Truy vấn dữ liệu thời gian thực từ Binance...",
+    "Lấy biến động giá và khối lượng từ Yahoo Finance...",
+    "Đọc các đầu báo và tin tức crypto mới nhất...",
+    "Tính toán tất cả các chỉ báo kỹ thuật liên quan...",
+    "Đang phân tích và kiểm chứng chéo độ chính xác...",
+    "Kích hoạt mô hình AI Groq tính toán xác suất & mục tiêu giá..."
 ];
 
 // Translators for UI signals
@@ -94,16 +98,33 @@ const textMap = {
     'Oversold': 'Quá bán',
     'Overbought': 'Quá mua',
     
-    'Bullish Cross': 'Cắt nhau Tăng giá',
-    'Bearish Cross': 'Cắt nhau Giảm giá',
+    'Bullish': 'Tăng giá',
+    'Bearish': 'Giảm giá',
+    
+    'Bullish Cross': 'Cắt lên Tăng giá',
+    'Bearish Cross': 'Cắt xuống Giảm giá',
     
     'WEAK TREND': 'XU HƯỚNG YẾU',
     'STRONG TREND': 'XU HƯỚNG MẠNH',
+    'Weak/No Trend': 'Xu hướng yếu',
+    'Strong Trend': 'Xu hướng mạnh',
+    'Moderate': 'Trung bình',
     
     'REGULAR': 'ĐANG HOẠT ĐỘNG',
     'CLOSED': 'ĐÓNG CỬA',
-    'PRE': 'TIỀN THỊ TRƯỜNG',
-    'POST': 'SAU THỊ TRƯỜNG'
+    
+    'accumulation': 'Tích lũy',
+    'distribution': 'Phân phối',
+    
+    'High': 'Biến động Cao',
+    'Medium': 'Biến động Vừa',
+    'Low': 'Biến động Thấp',
+    
+    'Normal': 'Bình thường',
+    'Very High': 'Rất cao',
+    'Very Low': 'Rất thấp',
+    'Above Average': 'Trên trung bình',
+    'Below Average': 'Dưới trung bình'
 };
 
 function translate(text) {
@@ -117,12 +138,18 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
     checkApiKeyStatus();
     setupEventListeners();
-    fetchQuoteOnly(); // Initial quote fetch
     
-    // Setup automatic real-time price polling every 5 seconds
+    // Initial fetches
+    fetchQuoteOnly();
+    fetchTechnicalsOnly(); // Initial indicators load
+    
+    // Polling 1: Price quote updates every 5 seconds
     setInterval(() => {
         fetchQuoteOnly();
     }, 5000);
+    
+    // Polling 2: Countdown clock for technical indicators (30s)
+    startTechnicalTimer();
 });
 
 // Setup Event Listeners
@@ -137,6 +164,10 @@ function setupEventListeners() {
             
             const tfNames = { '15m': '15 phút', '1h': '1 giờ', '4h': '4 giờ', '1D': '1 ngày' };
             showToast(`Khung thời gian chuyển sang ${tfNames[currentTimeframe]}`);
+            
+            // Re-fetch technicals instantly on timeframe change
+            fetchTechnicalsOnly();
+            resetTechnicalTimer();
         });
     });
 
@@ -205,6 +236,26 @@ function showToast(message) {
     }, 3000);
 }
 
+// Polling Timer for Technicals
+function startTechnicalTimer() {
+    countdownSeconds = 30;
+    elements.updateCountdown.innerText = `Cập nhật tự động sau: ${countdownSeconds}s`;
+    
+    if (countdownInterval) clearInterval(countdownInterval);
+    countdownInterval = setInterval(() => {
+        countdownSeconds--;
+        if (countdownSeconds <= 0) {
+            countdownSeconds = 30;
+            fetchTechnicalsOnly();
+        }
+        elements.updateCountdown.innerText = `Cập nhật tự động sau: ${countdownSeconds}s`;
+    }, 1000);
+}
+
+function resetTechnicalTimer() {
+    startTechnicalTimer();
+}
+
 // Fetch live price quote only
 async function fetchQuoteOnly() {
     try {
@@ -257,13 +308,191 @@ function updatePriceUI(data) {
     elements.statMarketState.className = mktState === 'REGULAR' ? 'stat-val state-active' : 'stat-val state-closed';
 }
 
-// Run the full AI Analysis flow
+// Fetch raw Technical Indicators data only (Lightweight)
+async function fetchTechnicalsOnly() {
+    try {
+        const response = await fetch(`/api/technicals?symbol=BTCUSDT&exchange=BINANCE&timeframe=${currentTimeframe}`);
+        const data = await response.json();
+        
+        if (response.ok && !data.error) {
+            updatePriceUI(data.price_details);
+            renderSupportResistance(data.technical_details.support_resistance);
+            renderIndicatorsTable(data.technical_details);
+        }
+    } catch (e) {
+        console.error('Failed to poll technical data', e);
+    }
+}
+
+// Render Support & Resistance levels panel
+function renderSupportResistance(sr) {
+    if (!sr) return;
+    
+    elements.nearRes.innerText = sr.nearest_resistance ? `$${Math.round(sr.nearest_resistance).toLocaleString()}` : '--';
+    elements.resDist.innerText = sr.distance_to_resistance_pct ? `+${sr.distance_to_resistance_pct}%` : '--';
+    elements.nearSupp.innerText = sr.nearest_support ? `$${Math.round(sr.nearest_support).toLocaleString()}` : '--';
+    elements.suppDist.innerText = sr.distance_to_support_pct ? `-${sr.distance_to_support_pct}%` : '--';
+    
+    elements.srR3.innerText = sr.resistance_3 ? `$${Math.round(sr.resistance_3).toLocaleString()}` : '--';
+    elements.srR2.innerText = sr.resistance_2 ? `$${Math.round(sr.resistance_2).toLocaleString()}` : '--';
+    elements.srR1.innerText = sr.resistance_1 ? `$${Math.round(sr.resistance_1).toLocaleString()}` : '--';
+    elements.srPv.innerText = sr.pivot ? `$${Math.round(sr.pivot).toLocaleString()}` : '--';
+    elements.srS1.innerText = sr.support_1 ? `$${Math.round(sr.support_1).toLocaleString()}` : '--';
+    elements.srS2.innerText = sr.support_2 ? `$${Math.round(sr.support_2).toLocaleString()}` : '--';
+    elements.srS3.innerText = sr.support_3 ? `$${Math.round(sr.support_3).toLocaleString()}` : '--';
+}
+
+// Render the comprehensive technical indicators table rows
+function renderIndicatorsTable(tv) {
+    if (!tv) return;
+    
+    elements.indicatorsTableBody.innerHTML = '';
+    
+    const price = tv.price_data.current_price;
+    const rsi = tv.rsi || {};
+    const macd = tv.macd || {};
+    const stoch = tv.stochastic || {};
+    const stochRsi = tv.stochastic_rsi || {};
+    const adx = tv.adx || {};
+    const bb = tv.bollinger_bands || {};
+    const atr = tv.atr || {};
+    const vol = tv.volume_analysis || {};
+    const sma = tv.sma || {};
+    const ema = tv.ema || {};
+    const cci = tv.cci || {};
+    const wr = tv.williams_r || {};
+    const ao = tv.awesome_oscillator || {};
+    const mom = tv.momentum || {};
+
+    const indicatorsData = [
+        {
+            group: 'Động lượng',
+            name: 'RSI (14)',
+            val: rsi.value !== undefined ? rsi.value.toFixed(2) : '--',
+            sig: translate(rsi.signal),
+            desc: rsi.value > 70 ? 'Thị trường quá mua, cảnh báo điều chỉnh' : rsi.value < 30 ? 'Thị trường quá bán, cơ hội hồi phục' : 'Động lượng RSI di chuyển trung tính'
+        },
+        {
+            group: 'Động lượng',
+            name: 'MACD (12, 26, 9)',
+            val: `M: ${(macd.macd_line || 0).toFixed(2)} | S: ${(macd.signal_line || 0).toFixed(2)}`,
+            sig: translate(macd.crossover),
+            desc: macd.crossover === 'Bullish' ? 'Đường MACD cắt lên trên đường tín hiệu (Tăng)' : 'Đường MACD cắt xuống dưới đường tín hiệu (Giảm)'
+        },
+        {
+            group: 'Động lượng',
+            name: 'Stochastic Oscillator',
+            val: `%K: ${(stoch.k || 0).toFixed(2)} | %D: ${(stoch.d || 0).toFixed(2)}`,
+            sig: translate(stoch.signal),
+            desc: stoch.signal === 'Oversold' ? 'Stoch chạm vùng quá bán' : stoch.signal === 'Overbought' ? 'Stoch chạm vùng quá mua' : 'Dao động Stoch ở vùng trung hòa'
+        },
+        {
+            group: 'Động lượng',
+            name: 'Stochastic RSI',
+            val: `%K: ${(stochRsi.k || 0).toFixed(2)}`,
+            sig: translate(stochRsi.signal),
+            desc: 'Kết hợp RSI và Stochastic xác định động lượng đảo chiều cực nhạy'
+        },
+        {
+            group: 'Động lượng',
+            name: 'Awesome Oscillator (AO)',
+            val: (ao.value || 0).toFixed(2),
+            sig: translate(ao.signal),
+            desc: ao.signal.includes('Bullish') ? 'Động lượng AO chuyển sang dương' : 'Động lượng AO chuyển sang âm'
+        },
+        {
+            group: 'Động lượng',
+            name: 'Momentum (MOM)',
+            val: (mom.value || 0).toFixed(2),
+            sig: translate(mom.signal),
+            desc: mom.signal.includes('Bullish') ? 'Tốc độ tăng giá đang gia tăng' : 'Tốc độ giảm giá đang gia tăng'
+        },
+        {
+            group: 'Động lượng',
+            name: 'Williams %R',
+            val: (wr.value || 0).toFixed(2),
+            sig: translate(wr.signal),
+            desc: 'Đo lường mức độ quá mua/quá bán từ đỉnh/đáy lịch sử'
+        },
+        {
+            group: 'Xu hướng',
+            name: 'Chỉ số ADX (14)',
+            val: (adx.value || 0).toFixed(2),
+            sig: translate(adx.trend_strength),
+            desc: `Độ mạnh xu hướng: ${translate(adx.trend_strength)}. (+DI: ${adx.plus_di || 0} | -DI: ${adx.minus_di || 0})`
+        },
+        {
+            group: 'Xu hướng',
+            name: 'Đường EMA (20) Ngắn',
+            val: Math.round(ema.ema20 || 0).toLocaleString(),
+            sig: price > (ema.ema20 || 0) ? 'MUA' : 'BÁN',
+            desc: price > (ema.ema20 || 0) ? 'Giá nằm trên EMA20 hỗ trợ ngắn hạn' : 'Giá nằm dưới EMA20 cản ngắn hạn'
+        },
+        {
+            group: 'Xu hướng',
+            name: 'Đường SMA (50) Vừa',
+            val: Math.round(sma.sma50 || 0).toLocaleString(),
+            sig: price > (sma.sma50 || 0) ? 'MUA' : 'BÁN',
+            desc: price > (sma.sma50 || 0) ? 'Xu hướng trung hạn đang tăng' : 'Xu hướng trung hạn đang giảm'
+        },
+        {
+            group: 'Xu hướng',
+            name: 'Đường SMA (200) Dài',
+            val: Math.round(sma.sma200 || 0).toLocaleString(),
+            sig: price > (sma.sma200 || 0) ? 'MUA' : 'BÁN',
+            desc: price > (sma.sma200 || 0) ? 'Xu hướng dài hạn tăng vững chắc (Thị trường Bò)' : 'Xu hướng dài hạn giảm (Thị trường Gấu)'
+        },
+        {
+            group: 'Biến động',
+            name: 'Dải Bollinger Bands (20,2)',
+            val: `U: ${Math.round(bb.upper || 0).toLocaleString()} | L: ${Math.round(bb.lower || 0).toLocaleString()}`,
+            sig: bb.squeeze ? 'NÉN (VOL THẤP)' : 'MỞ RỘNG',
+            desc: `Giá nằm ở ${translate(bb.position)}. Độ rộng BBw: ${(bb.width || 0).toFixed(4)}`
+        },
+        {
+            group: 'Biến động',
+            name: 'Chỉ báo ATR (14)',
+            val: `${(atr.value || 0).toFixed(2)} (${(atr.percent_of_price || 0).toFixed(2)}%)`,
+            sig: translate(atr.volatility),
+            desc: `Biến động giá hiện tại ở mức ${translate(atr.volatility)}`
+        },
+        {
+            group: 'Khối lượng',
+            name: 'Khối lượng giao dịch (Vol)',
+            val: Math.round(vol.current || 0).toLocaleString(),
+            sig: translate(vol.signal),
+            desc: `Vol hiện tại bằng ${vol.ratio || 0} lần Vol trung bình 20 ngày (${Math.round(vol.average_20 || 0).toLocaleString()})`
+        }
+    ];
+
+    indicatorsData.forEach(ind => {
+        const tr = document.createElement('tr');
+        
+        let sigClass = 'badge badge-neutral';
+        if (ind.sig.includes('MUA') || ind.sig.includes('TĂNG') || ind.sig.includes('MỞ RỘNG') || ind.sig.includes('MẠNH')) {
+            sigClass = 'badge badge-buy';
+        } else if (ind.sig.includes('BÁN') || ind.sig.includes('GIẢM') || ind.sig.includes('NÉN') || ind.sig.includes('YẾU')) {
+            sigClass = 'badge badge-sell';
+        }
+
+        tr.innerHTML = `
+            <td>${ind.group}</td>
+            <td>${ind.name}</td>
+            <td>${ind.val}</td>
+            <td><span class="${sigClass}">${ind.sig}</span></td>
+            <td style="color: var(--text-secondary); font-size: 12px;">${ind.desc}</td>
+        `;
+        elements.indicatorsTableBody.appendChild(tr);
+    });
+}
+
+// Run the full AI Analysis flow (fast Groq API request)
 async function runMarketAnalysis() {
     if (isAnalyzing) return;
     
     isAnalyzing = true;
     elements.runBtn.disabled = true;
-    elements.runBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang phân tích...`;
+    elements.runBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tính toán...`;
     
     // Transition UI states
     elements.emptyState.classList.add('hidden');
@@ -296,8 +525,15 @@ async function runMarketAnalysis() {
         if (response.ok && !data.error) {
             elements.loadingState.classList.add('hidden');
             elements.resultsState.classList.remove('hidden');
-            renderAnalysisResults(data);
-            showToast('Đã hoàn thành phân tích thị trường!');
+            
+            // Render technical sections instantly with newest data
+            renderSupportResistance(data.technical_details.support_resistance);
+            renderIndicatorsTable(data.technical_details);
+            resetTechnicalTimer();
+            
+            // Render Groq AI results
+            renderAIResults(data);
+            showToast('Đã hoàn thành phân tích toán học & mục tiêu!');
         } else {
             throw new Error(data.error || 'Máy chủ trả về mã lỗi');
         }
@@ -314,132 +550,16 @@ async function runMarketAnalysis() {
     }
 }
 
-// Render dynamic results
-function renderAnalysisResults(data) {
-    // 1. Update live price/market details
+// Render dynamic AI results
+function renderAIResults(data) {
     updatePriceUI(data.price_details);
     if (data.technical_details.exchange) {
         elements.marketExchange.innerText = data.technical_details.exchange;
     }
     
-    // 2. Render technical indicators (gauges)
-    const tv = data.technical_details;
-    
-    // RSI
-    if (tv.rsi && tv.rsi.rsi) {
-        const rsi = parseFloat(tv.rsi.rsi);
-        elements.rsiVal.innerText = rsi.toFixed(1);
-        elements.rsiValBar.style.width = `${rsi}%`;
-        
-        let status = 'Neutral';
-        let rsiClass = 'badge badge-neutral';
-        if (rsi < 30) {
-            status = 'Oversold';
-            rsiClass = 'badge badge-buy';
-        } else if (rsi > 70) {
-            status = 'Overbought';
-            rsiClass = 'badge badge-sell';
-        }
-        elements.rsiStatus.innerText = translate(status);
-        elements.rsiStatus.className = rsiClass;
-        
-        elements.indRsi.innerText = translate(status).toUpperCase();
-        elements.indRsi.className = rsiClass;
-    }
-    
-    // MACD
-    if (tv.macd) {
-        const macd = tv.macd.macd || 0;
-        const signal = tv.macd.signal || 0;
-        elements.macdLine.innerText = macd.toFixed(2);
-        elements.macdSignal.innerText = signal.toFixed(2);
-        
-        const isBullish = macd > signal;
-        elements.macdCrossover.innerText = isBullish ? 'Cắt nhau Tăng giá' : 'Cắt nhau Giảm giá';
-        elements.macdCrossover.className = isBullish ? 'macd-status bullish' : 'macd-status bearish';
-        
-        elements.indMacd.innerText = isBullish ? 'TĂNG GIÁ' : 'GIẢM GIÁ';
-        elements.indMacd.className = isBullish ? 'badge badge-buy' : 'badge badge-sell';
-    }
-    
-    // Bollinger Bands
-    if (tv.bollinger_bands) {
-        const bb = tv.bollinger_bands;
-        elements.bbUpper.innerText = Math.round(bb.upper || 0).toLocaleString();
-        elements.bbLower.innerText = Math.round(bb.lower || 0).toLocaleString();
-        elements.bbWidth.innerText = (bb.width || 0).toFixed(4);
-        
-        const current = tv.price_data.current_price;
-        const upper = bb.upper || current;
-        const lower = bb.lower || current;
-        let positionPct = 50;
-        if (upper !== lower) {
-            positionPct = ((current - lower) / (upper - lower)) * 100;
-            positionPct = Math.max(0, Math.min(100, positionPct));
-        }
-        elements.bbPosition.style.left = `${positionPct}%`;
-        
-        let bbDesc = 'Dải trung hòa';
-        if (bb.width < 0.02) bbDesc = 'Cảnh báo nén (Vol thấp)';
-        else if (positionPct > 90) bbDesc = 'Giá đang chạm Dải Trên';
-        else if (positionPct < 10) bbDesc = 'Giá đang chạm Dải Dưới';
-        elements.bbDescription.innerText = bbDesc;
-    }
-    
-    // ADX
-    if (tv.adx) {
-        const adx = tv.adx.adx || 0;
-        let adxText = 'XU HƯỚNG YẾU';
-        let adxClass = 'badge badge-neutral';
-        if (adx > 25) {
-            adxText = 'XU HƯỚNG MẠNH';
-            adxClass = 'badge badge-buy';
-        }
-        elements.indAdx.innerText = `${adxText} (${Math.round(adx)})`;
-        elements.indAdx.className = adxClass;
-    }
-    
-    // Stochastic
-    if (tv.stochastic) {
-        const k = tv.stochastic.k || 50;
-        let stochText = 'TRUNG LẬP';
-        let stochClass = 'badge badge-neutral';
-        if (k < 20) {
-            stochText = 'QUÁ BÁN';
-            stochClass = 'badge badge-buy';
-        } else if (k > 80) {
-            stochText = 'QUÁ MUA';
-            stochClass = 'badge badge-sell';
-        }
-        elements.indStoch.innerText = stochText;
-        elements.indStoch.className = stochClass;
-    }
-    
-    // MAs / EMA
-    if (tv.market_sentiment) {
-        const rating = tv.market_sentiment.overall_rating || 0;
-        let ratingText = 'TRUNG LẬP';
-        let ratingClass = 'badge badge-neutral';
-        
-        if (rating > 0.5) {
-            ratingText = 'TĂNG GIÁ';
-            ratingClass = 'badge badge-buy';
-        } else if (rating < -0.5) {
-            ratingText = 'GIẢM GIÁ';
-            ratingClass = 'badge badge-sell';
-        }
-        elements.indMa.innerText = ratingText;
-        elements.indMa.className = ratingClass;
-        
-        // Overall TV Signal
-        const tvSigText = tv.market_sentiment.buy_sell_signal || 'NEUTRAL';
-        elements.tvSignal.innerText = translate(tvSigText);
-        elements.tvSignal.className = 'confluence-val ' + 
-            (tvSigText.includes('BUY') ? 'strong-buy' : tvSigText.includes('SELL') ? 'strong-sell' : 'neutral');
-    }
-    
-    // 3. Render Groq AI Analysis
     const ai = data.ai_analysis;
+    
+    // 1. Verdict decision
     const verdict = ai.decision || 'HOLD';
     elements.aiVerdict.innerText = translate(verdict);
     elements.aiVerdict.className = 'recommendation-badge ' + 
@@ -452,9 +572,22 @@ function renderAnalysisResults(data) {
     elements.aiConfidence.innerText = `${confidence}%`;
     elements.aiConfidenceFill.style.width = `${confidence}%`;
     
-    elements.aiJustification.innerText = ai.reasoning || ai.justification || 'Không có tóm tắt lý do.';
+    // 2. Mathematical targets
+    const targetVal = ai.target_price || 0;
+    elements.aiTargetPrice.innerText = targetVal ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(targetVal) : '$ --,---.--';
+    elements.aiTargetTimeframe.innerText = ai.target_timeframe || '--';
     
-    // Bullet points
+    // 3. Probabilities
+    const bullPct = ai.probability_bullish || 50;
+    const bearPct = ai.probability_bearish || 50;
+    elements.bullishPct.innerText = `${bullPct}% TĂNG`;
+    elements.bearishPct.innerText = `${bearPct}% GIẢM`;
+    elements.probFillBull.style.width = `${bullPct}%`;
+    elements.probFillBear.style.width = `${bearPct}%`;
+    
+    // 4. Justifications & points
+    elements.aiJustification.innerText = ai.reasoning || ai.justification || 'Không có luận chứng tóm tắt.';
+    
     elements.bullishPoints.innerHTML = '';
     const bullPoints = ai.bullish_thesis_points || ai.bullish_thesis || [];
     if (bullPoints.length === 0) {
@@ -479,7 +612,7 @@ function renderAnalysisResults(data) {
         });
     }
     
-    // 4. Render News Headlines
+    // 5. Render News Headlines
     elements.newsContainer.innerHTML = '';
     const news = data.news_details || [];
     if (news.length === 0) {

@@ -52,197 +52,213 @@
             </div>
         </header>
 
-        <!-- Main Dashboard Layout -->
-        <main class="dashboard-grid">
+        <!-- Main Dashboard Layout (2-Column) -->
+        <main class="dashboard-grid-2col">
             
-            <!-- COLUMN 1: Market Ticker & Live Data -->
-            <section class="grid-item card-glass live-market-panel">
-                <div class="card-header">
-                    <h2><i class="fa-solid fa-chart-line text-blue"></i> Báo giá thị trường trực tiếp</h2>
-                    <span class="source-tag">Yahoo Finance</span>
-                </div>
-                <div class="market-quote-display">
-                    <div class="symbol-info">
-                        <span class="symbol-name">BTC-USD</span>
-                        <span class="exchange-name" id="market-exchange">BINANCE</span>
+            <!-- COLUMN 1 (LEFT): Quote, S/R Levels, News -->
+            <div class="dashboard-sidebar">
+                
+                <!-- 1. Price Quote -->
+                <section class="card-glass panel-padding">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-chart-line text-blue"></i> Báo giá trực tiếp</h2>
+                        <span class="source-tag">Yahoo Finance</span>
                     </div>
-                    <div class="price-box">
-                        <span class="current-price" id="live-price">$ --,---.--</span>
-                        <span class="price-change positive" id="price-change">
-                            <i class="fa-solid fa-caret-up"></i> --.--% (+$---.--)
-                        </span>
-                    </div>
-                    <div class="market-stats">
-                        <div class="stat-row">
-                            <span class="stat-lbl">Cao nhất 52 tuần</span>
-                            <span class="stat-val" id="stat-52w-high">$ --,---.--</span>
+                    <div class="market-quote-display">
+                        <div class="symbol-info">
+                            <span class="symbol-name">BTC-USD</span>
+                            <span class="exchange-name" id="market-exchange">BINANCE</span>
                         </div>
-                        <div class="stat-row">
-                            <span class="stat-lbl">Thấp nhất 52 tuần</span>
-                            <span class="stat-val" id="stat-52w-low">$ --,---.--</span>
+                        <div class="price-box">
+                            <span class="current-price" id="live-price">$ --,---.--</span>
+                            <span class="price-change positive" id="price-change">
+                                <i class="fa-solid fa-caret-up"></i> --.--% (+$---.--)
+                            </span>
                         </div>
-                        <div class="stat-row">
-                            <span class="stat-lbl">Trạng thái thị trường</span>
-                            <span class="stat-val state-active" id="stat-market-state">ĐANG HOẠT ĐỘNG</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card-header mt-4">
-                    <h2><i class="fa-solid fa-gauge-high text-purple"></i> Biểu đồ kỹ thuật</h2>
-                    <span class="source-tag">TradingView MCP</span>
-                </div>
-                <div class="gauges-container">
-                    <div class="gauge-box">
-                        <span class="gauge-name">Chỉ số RSI (14)</span>
-                        <div class="gauge-bar-wrapper">
-                            <div class="gauge-bar-value" id="rsi-val-bar" style="width: 50%;"></div>
-                            <div class="gauge-marker oversold">30</div>
-                            <div class="gauge-marker overbought">70</div>
-                        </div>
-                        <div class="gauge-meta">
-                            <span id="rsi-val">50.0</span>
-                            <span class="badge" id="rsi-status">Trung lập</span>
-                        </div>
-                    </div>
-
-                    <div class="gauge-box">
-                        <span class="gauge-name">Động lượng MACD</span>
-                        <div class="macd-display">
-                            <div class="macd-line-val">
-                                <span class="lbl">Đường MACD</span>
-                                <span class="val" id="macd-line">--.--</span>
+                        <div class="market-stats">
+                            <div class="stat-row">
+                                <span class="stat-lbl">Cao nhất 52 tuần</span>
+                                <span class="stat-val" id="stat-52w-high">$ --,---.--</span>
                             </div>
-                            <div class="macd-signal-val">
-                                <span class="lbl">Đường Tín Hiệu</span>
-                                <span class="val" id="macd-signal">--.--</span>
+                            <div class="stat-row">
+                                <span class="stat-lbl">Thấp nhất 52 tuần</span>
+                                <span class="stat-val" id="stat-52w-low">$ --,---.--</span>
                             </div>
-                            <div class="macd-status" id="macd-crossover">--</div>
-                        </div>
-                    </div>
-
-                    <div class="gauge-box">
-                        <span class="gauge-name">Dải Bollinger (BB)</span>
-                        <div class="bb-status-box">
-                            <div class="bb-channel">
-                                <div class="bb-band upper">Dải trên: <span id="bb-upper">$--,---</span></div>
-                                <div class="bb-price-position" id="bb-position" style="left: 50%;"></div>
-                                <div class="bb-band lower">Dải dưới: <span id="bb-lower">$--,---</span></div>
-                            </div>
-                            <div class="bb-meta">
-                                <span>Độ rộng BB: <span id="bb-width">-.--</span></span>
-                                <span id="bb-description">Tích lũy trung tính</span>
+                            <div class="stat-row">
+                                <span class="stat-lbl">Múi giờ thị trường</span>
+                                <span class="stat-val state-active" id="stat-market-state">ĐANG HOẠT ĐỘNG</span>
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <!-- COLUMN 2: AI Verdict & Analysis (Groq) -->
-            <section class="grid-item card-glass ai-analysis-panel">
-                <div class="card-header">
-                    <h2><i class="fa-solid fa-robot text-cyan"></i> Nhận định thị trường từ AI Groq</h2>
-                    <span class="model-tag" id="active-model">llama-3.3-70b-versatile</span>
-                </div>
-
-                <!-- Analysis Initial/Empty State -->
-                <div class="analysis-empty-state" id="analysis-empty">
-                    <div class="empty-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-                    <h3>Sẵn sàng phân tích BTC</h3>
-                    <p>Chọn khung thời gian và nhấn nút "Chạy phân tích" ở trên để lấy dữ liệu từ TradingView MCP và kích hoạt phân tích từ AI Groq.</p>
-                </div>
-
-                <!-- Analysis Loading State -->
-                <div class="analysis-loading-state hidden" id="analysis-loading">
-                    <div class="loading-ring"><div></div><div></div><div></div><div></div></div>
-                    <h3>Đang tổng hợp dữ liệu thị trường</h3>
-                    <p class="loading-step" id="loading-step">Đang kết nối tới TradingView MCP...</p>
-                </div>
-
-                <!-- Analysis Content Area -->
-                <div class="analysis-content hidden" id="analysis-results">
-                    <div class="verdict-header">
-                        <div class="recommendation-badge" id="ai-verdict">TRUNG LẬP</div>
-                        <div class="confidence-container">
-                            <div class="confidence-header">
-                                <span>Độ tin cậy của AI</span>
-                                <span id="ai-confidence">0%</span>
+                <!-- 2. Support / Resistance Levels -->
+                <section class="card-glass panel-padding">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-arrows-left-right text-purple"></i> Ngưỡng Hỗ trợ / Kháng cự</h2>
+                        <span class="source-tag">Pivot Classic</span>
+                    </div>
+                    <div class="sr-levels-display">
+                        <div class="sr-metric-grid">
+                            <div class="sr-metric-box resistance">
+                                <span class="lbl">Kháng cự gần nhất</span>
+                                <span class="val" id="near-res">$--,---</span>
+                                <span class="dist" id="res-dist">--%</span>
                             </div>
-                            <div class="confidence-progress-bar">
-                                <div class="progress-fill" id="ai-confidence-fill" style="width: 0%;"></div>
+                            <div class="sr-metric-box support">
+                                <span class="lbl">Hỗ trợ gần nhất</span>
+                                <span class="val" id="near-supp">$--,---</span>
+                                <span class="dist" id="supp-dist">--%</span>
                             </div>
                         </div>
+                        <div class="sr-table-wrapper">
+                            <table class="sr-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mốc kỹ thuật</th>
+                                        <th>Mức giá (USD)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="tr-res"><td>Kháng cự 3 (R3)</td><td id="sr-r3">--</td></tr>
+                                    <tr class="tr-res"><td>Kháng cự 2 (R2)</td><td id="sr-r2">--</td></tr>
+                                    <tr class="tr-res"><td>Kháng cự 1 (R1)</td><td id="sr-r1">--</td></tr>
+                                    <tr class="tr-pivot"><td>Điểm Xoay (Pivot)</td><td id="sr-pv">--</td></tr>
+                                    <tr class="tr-supp"><td>Hỗ trợ 1 (S1)</td><td id="sr-s1">--</td></tr>
+                                    <tr class="tr-supp"><td>Hỗ trợ 2 (S2)</td><td id="sr-s2">--</td></tr>
+                                    <tr class="tr-supp"><td>Hỗ trợ 3 (S3)</td><td id="sr-s3">--</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. News Section -->
+                <section class="card-glass panel-padding">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-newspaper text-cyan"></i> Tin tức thị trường</h2>
+                        <span class="source-tag">Kênh RSS</span>
+                    </div>
+                    <div class="news-list" id="news-container">
+                        <div class="news-item">
+                            <span class="news-time">Vừa xong</span>
+                            <a href="#" class="news-title">Nhấn "Chạy phân tích" để tải tin tức thị trường mới nhất</a>
+                            <span class="news-source">Hệ thống</span>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- COLUMN 2 (RIGHT): AI Forecast (top) + Stats Table (bottom) -->
+            <div class="dashboard-main-content">
+                
+                <!-- 1. AI Mathematical Verdict Box -->
+                <section class="card-glass panel-padding">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-square-poll-vertical text-cyan"></i> Dự báo toán học & Nhận định từ AI Groq</h2>
+                        <span class="model-tag" id="active-model">llama-3.3-70b-versatile</span>
                     </div>
 
-                    <div class="justification-box">
-                        <h3>Tóm tắt nhận định</h3>
-                        <p id="ai-justification">Chưa thực hiện phân tích nào.</p>
+                    <!-- Empty State -->
+                    <div class="analysis-empty-state" id="analysis-empty">
+                        <div class="empty-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                        <h3>Sẵn sàng tính toán xác suất & mục tiêu giá</h3>
+                        <p>Nhấp vào "Chạy phân tích" để kích hoạt thuật toán AI Groq tổng hợp chỉ báo và xác định cụ thể mốc giá chạy đến.</p>
                     </div>
 
-                    <div class="thesis-columns">
-                        <div class="thesis-col bullish-thesis">
-                            <h3><i class="fa-solid fa-circle-chevron-up text-green"></i> Luận điểm tăng giá</h3>
-                            <ul id="bullish-points">
-                                <li>Đang chờ...</li>
-                            </ul>
-                        </div>
-                        <div class="thesis-col bearish-thesis">
-                            <h3><i class="fa-solid fa-circle-chevron-down text-red"></i> Luận điểm giảm giá</h3>
-                            <ul id="bearish-points">
-                                <li>Đang chờ...</li>
-                            </ul>
-                        </div>
+                    <!-- Loading State -->
+                    <div class="analysis-loading-state hidden" id="analysis-loading">
+                        <div class="loading-ring"><div></div><div></div><div></div><div></div></div>
+                        <h3>Đang phân tích các thông số kỹ thuật...</h3>
+                        <p class="loading-step" id="loading-step">Đang lấy dữ liệu từ TradingView MCP...</p>
                     </div>
-                </div>
-            </section>
 
-            <!-- COLUMN 3: Indicators Checklist & News Sentiment -->
-            <section class="grid-item card-glass checklist-news-panel">
-                <div class="card-header">
-                    <h2><i class="fa-solid fa-square-check text-green"></i> Tín hiệu đồng thuận kỹ thuật</h2>
-                    <span class="source-tag">Tóm tắt TV</span>
-                </div>
-                <div class="technical-confluence-summary">
-                    <div class="confluence-rating">
-                        <span class="confluence-lbl">Tín hiệu TV tổng hợp</span>
-                        <span class="confluence-val" id="tv-signal">TRUNG LẬP</span>
-                    </div>
-                    <div class="indicators-grid" id="indicators-grid">
-                        <div class="indicator-row">
-                            <span>Động lượng RSI(14)</span>
-                            <span class="badge badge-neutral" id="ind-rsi">TRUNG LẬP</span>
-                        </div>
-                        <div class="indicator-row">
-                            <span>Đường cắt MACD</span>
-                            <span class="badge badge-neutral" id="ind-macd">TRUNG LẬP</span>
-                        </div>
-                        <div class="indicator-row">
-                            <span>Chỉ báo Stochastic</span>
-                            <span class="badge badge-neutral" id="ind-stoch">TRUNG LẬP</span>
-                        </div>
-                        <div class="indicator-row">
-                            <span>Độ mạnh xu hướng ADX</span>
-                            <span class="badge badge-neutral" id="ind-adx">TRUNG LẬP</span>
-                        </div>
-                        <div class="indicator-row">
-                            <span>Đường trung bình EMA(20) / SMA(20)</span>
-                            <span class="badge badge-neutral" id="ind-ma">TRUNG LẬP</span>
-                        </div>
-                    </div>
-                </div>
+                    <!-- Results content -->
+                    <div class="analysis-content hidden" id="analysis-results">
+                        <!-- Main Metric Grid (Decision, Confidence, Target, Time) -->
+                        <div class="ai-metrics-grid">
+                            <div class="ai-metric-card verdict-card">
+                                <span class="card-lbl">Tín hiệu đồng thuận</span>
+                                <div class="recommendation-badge" id="ai-verdict">TRUNG LẬP</div>
+                                <span class="confidence-text">Độ tin cậy: <strong id="ai-confidence">0%</strong></span>
+                            </div>
 
-                <div class="card-header mt-4">
-                    <h2><i class="fa-solid fa-newspaper text-cyan"></i> Tin tức thị trường nổi bật</h2>
-                    <span class="source-tag">Kênh RSS</span>
-                </div>
-                <div class="news-list" id="news-container">
-                    <div class="news-item">
-                        <span class="news-time">Vừa xong</span>
-                        <a href="#" class="news-title">Nhấn nút "Chạy phân tích" để cập nhật các tin tức và tiêu đề thị trường mới nhất</a>
-                        <span class="news-source">Hệ thống</span>
+                            <div class="ai-metric-card target-card">
+                                <span class="card-lbl">Mục tiêu giá chạy đến (Target)</span>
+                                <div class="target-price-display" id="ai-target-price">$ --,---.--</div>
+                                <span class="timeframe-text"><i class="fa-solid fa-clock"></i> Khung thời gian: <strong id="ai-target-timeframe">--</strong></span>
+                            </div>
+
+                            <div class="ai-metric-card probability-card">
+                                <span class="card-lbl">Xác suất di chuyển tiếp theo</span>
+                                <div class="prob-bars-display">
+                                    <div class="prob-percentage">
+                                        <span class="bullish-pct" id="bullish-pct">50% TĂNG</span>
+                                        <span class="bearish-pct" id="bearish-pct">50% GIẢM</span>
+                                    </div>
+                                    <div class="prob-progress-bar">
+                                        <div class="prob-fill-bullish" id="prob-fill-bull" style="width: 50%;"></div>
+                                        <div class="prob-fill-bearish" id="prob-fill-bear" style="width: 50%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Core Reason box -->
+                        <div class="justification-box">
+                            <h3>Tóm tắt nhận định & Luận chứng</h3>
+                            <p id="ai-justification">Chưa có phân tích.</p>
+                        </div>
+
+                        <!-- Bully/Bear lists -->
+                        <div class="thesis-columns">
+                            <div class="thesis-col bullish-thesis">
+                                <h3><i class="fa-solid fa-circle-chevron-up text-green"></i> Luận điểm tăng giá</h3>
+                                <ul id="bullish-points">
+                                    <li>Đang chờ...</li>
+                                </ul>
+                            </div>
+                            <div class="thesis-col bearish-thesis">
+                                <h3><i class="fa-solid fa-circle-chevron-down text-red"></i> Luận điểm giảm giá</h3>
+                                <ul id="bearish-points">
+                                    <li>Đang chờ...</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
+
+                <!-- 2. Comprehensive Indicators Statistics Table -->
+                <section class="card-glass panel-padding">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-table text-purple"></i> Bảng thống kê chi tiết toàn bộ chỉ báo kỹ thuật</h2>
+                        <span class="update-countdown-tag" id="update-countdown">Cập nhật tự động sau: --s</span>
+                    </div>
+                    <div class="indicators-table-wrapper">
+                        <table class="indicators-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>Nhóm Chỉ Báo</th>
+                                    <th>Tên Kỹ Thuật</th>
+                                    <th>Giá Trị Hiện Tại</th>
+                                    <th>Trạng Thái / Tín Hiệu</th>
+                                    <th>Nhận Định Xu Hướng</th>
+                                </tr>
+                            </thead>
+                            <tbody id="indicators-table-body">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                                        Nhấn nút "Chạy phân tích" ở góc phải để nạp thông số kỹ thuật thời gian thực từ TradingView.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </div>
+
         </main>
     </div>
 

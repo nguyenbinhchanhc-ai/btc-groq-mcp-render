@@ -54,6 +54,28 @@ async def get_market_quote(symbol: str = "BTC-USD"):
         return {"error": price_data["error"]}
     return price_data
 
+@app.get("/api/technicals")
+async def get_technical_data(
+    symbol: str = "BTCUSDT",
+    exchange: str = "BINANCE",
+    timeframe: str = "1h"
+):
+    """
+    Get only price details and technical indicators from TradingView MCP.
+    Does not run Groq AI, suitable for lightweight periodic polling.
+    """
+    try:
+        price_details = get_price("BTC-USD")
+        tv_details = analyze_coin(symbol, exchange, timeframe)
+        if "error" in tv_details:
+            return {"error": tv_details["error"]}
+        return {
+            "price_details": price_details,
+            "technical_details": tv_details
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 class AnalyzeRequest(BaseModel):
     pass
 
@@ -127,9 +149,9 @@ Change 24h: {price.get('change_pct')}% ({price.get('change')} USD)
 52W High: {price.get('52w_high')}, 52W Low: {price.get('52w_low')}
 """
 
-    rsi_val = tv.get("rsi", {}).get("rsi", "N/A")
-    macd_val = tv.get("macd", {}).get("macd", 0)
-    macd_sig = tv.get("macd", {}).get("signal", 0)
+    rsi_val = tv.get("rsi", {}).get("value", "N/A")
+    macd_val = tv.get("macd", {}).get("macd_line", 0)
+    macd_sig = tv.get("macd", {}).get("signal_line", 0)
     bb_upper = tv.get("bollinger_bands", {}).get("upper", 0)
     bb_lower = tv.get("bollinger_bands", {}).get("lower", 0)
     overall_rating = tv.get("market_sentiment", {}).get("overall_rating", 0)
@@ -138,11 +160,12 @@ Change 24h: {price.get('change_pct')}% ({price.get('change')} USD)
     technical_info = f"""
 TradingView Signals (Interval: {tv.get('timeframe')}):
 - RSI (14): {rsi_val}
-- MACD Line: {macd_val:.4f}, MACD Signal: {macd_sig:.4f} (Crossover: {'BULLISH' if macd_val > macd_sig else 'BEARISH'})
+- MACD Line: {macd_val:.6f}, MACD Signal: {macd_sig:.4f} (Crossover: {'BULLISH' if macd_val > macd_sig else 'BEARISH'})
 - Bollinger Bands: Upper {bb_upper:.2f}, Lower {bb_lower:.2f}
 - Overall Technical Rating: {overall_rating} (Signal: {overall_signal})
 - Volume analysis: {tv.get('volume_analysis', {})}
-- ADX trend strength: {tv.get('adx', {}).get('adx', 'N/A')}
+- ADX trend strength: {tv.get('adx', {}).get('value', 'N/A')} ({tv.get('adx', {}).get('trend_strength', 'N/A')})
+- Stochastic: {tv.get('stochastic', {})}
 - Support/Resistance: {tv.get('support_resistance', {})}
 """
 
@@ -154,13 +177,17 @@ TradingView Signals (Interval: {tv.get('timeframe')}):
 
     system_prompt = """
 You are a professional cryptocurrency research and trading intelligence system.
-Your job is to analyze the technical metrics from TradingView, current prices, and news, and formulate a clear, actionable trading thesis.
+Your job is to analyze the technical metrics from TradingView, current prices, and news, and formulate a clear, mathematical trading thesis.
 You MUST write all text descriptions, reasoning, and bullet points in Vietnamese.
 You must return your output strictly in JSON format.
 The JSON must contain exactly these keys:
 {
   "decision": "STRONG BUY" | "BUY" | "HOLD" | "SELL" | "STRONG SELL",
   "confidence": <integer between 0 and 100>,
+  "probability_bullish": <integer representing probability percentage of upward movement, e.g., 65>,
+  "probability_bearish": <integer representing probability percentage of downward movement, e.g., 35 (sum of bullish and bearish probabilities must equal 100)>,
+  "target_price": <float representing specific target price BTC will run to next, e.g., 63450.0>,
+  "target_timeframe": "<string predicting estimated time to reach that target, e.g., 'trong vòng 2-4 giờ', 'trong 12 giờ tới'>",
   "reasoning": "<Tóm tắt nhận định bằng tiếng Việt (2-3 câu)>",
   "bullish_thesis_points": [
     "<Luận điểm tăng giá 1 bằng tiếng Việt>",
@@ -206,7 +233,11 @@ Please analyze this market data for Bitcoin:
         return {
             "decision": "HOLD",
             "confidence": 50,
-            "reasoning": f"Failed to parse Groq response: {str(e)}",
-            "bullish_thesis_points": ["Could not extract"],
-            "bearish_thesis_points": ["Could not extract"]
+            "probability_bullish": 50,
+            "probability_bearish": 50,
+            "target_price": price.get("price", 60000.0),
+            "target_timeframe": "Không xác định",
+            "reasoning": f"Lỗi phân tích phản hồi Groq: {str(e)}",
+            "bullish_thesis_points": ["Không thể trích xuất"],
+            "bearish_thesis_points": ["Không thể trích xuất"]
         }
