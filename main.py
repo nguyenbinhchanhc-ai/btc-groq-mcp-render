@@ -157,7 +157,7 @@ async def run_analysis(
             if dk and dk not in key_pool:
                 key_pool.append(dk)
                 
-        ai_verdict = analyze_with_groq_fallback(key_pool, model, price_details, tv_details, news_details)
+        ai_verdict = await analyze_with_groq_fallback(key_pool, model, price_details, tv_details, news_details)
         
         return {
             "price_details": price_details,
@@ -169,34 +169,50 @@ async def run_analysis(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-def analyze_with_groq_fallback(api_keys: list, model: str, price: dict, tv: dict, news: list) -> dict:
+def safe_openai_call(key_pool: list, system_prompt: str, user_prompt: str, model: str, json_mode: bool = False) -> str:
     """
-    Tries each API key in the list sequentially until one succeeds
+    Tries calling OpenAI using keys in key_pool sequentially as fallback
     """
+    from openai import OpenAI
     last_err = None
-    for key in api_keys:
+    for key in key_pool:
         if not key:
             continue
         try:
-            return analyze_with_groq(key, model, price, tv, news)
+            client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=key)
+            kwargs = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "temperature": 0.25
+            }
+            if json_mode:
+                kwargs["response_format"] = {"type": "json_object"}
+            response = client.chat.completions.create(**kwargs)
+            return response.choices[0].message.content
         except Exception as e:
             last_err = str(e)
-            print(f"Key failed: {key[:15]}... Error: {last_err}")
+            print(f"Key {key[:15]} failed: {last_err}")
             continue
-    raise Exception(f"Tất cả API keys đều bị lỗi giới hạn tần suất (Rate Limit) hoặc không hợp lệ. Lỗi cuối cùng: {last_err}")
+    raise Exception(f"Tất cả API keys trong bể luân phiên đều thất bại. Lỗi cuối cùng: {last_err}")
 
-def analyze_with_groq(api_key: str, model: str, price: dict, tv: dict, news: list) -> dict:
+async def analyze_with_groq_fallback(api_keys: list, model: str, price: dict, tv: dict, news: list) -> dict:
     """
-    Call Groq API using the OpenAI library configured for Groq
+    Run Phe Bò (Agent 1 using Key 1) and Phe Gấu (Agent 2 using Key 2) concurrently,
+    then run Trọng Tài (Agent 3 using Key 3) to judge the reports, with automatic fallback rotation.
     """
-    from openai import OpenAI
-    import json
-
-    client = OpenAI(
-        base_url="https://api.groq.com/openai/v1",
-        api_key=api_key
-    )
-
+    # Pad key pool if there are fewer than 3 keys
+    keys = list(api_keys)
+    while len(keys) < 3:
+        keys.append(keys[0] if keys else "")
+        
+    # Rotate the starting key lists for each agent call to guarantee usage of Key 1, Key 2, Key 3
+    pool_bull = keys[0:] + keys[:0]
+    pool_bear = keys[1:] + keys[:1]
+    pool_ref = keys[2:] + keys[:2]
+    
     current_price = price.get("price") or 60000.0
     sr = tv.get("support_resistance") or {}
     pivot = sr.get("pivot") or current_price
@@ -205,13 +221,11 @@ def analyze_with_groq(api_key: str, model: str, price: dict, tv: dict, news: lis
     s1 = sr.get("support_1") or (current_price - 500)
     s2 = sr.get("support_2") or (current_price - 1000)
     
-    # Safe guard ATR volatility to ensure it is never None or 0
     atr_val = tv.get("atr") or {}
     atr_val = atr_val.get("value")
     if atr_val is None or atr_val == 0:
         atr_val = 300.0
 
-    # Prepare data details for the prompt
     price_info = f"""
 Current price: {current_price} USD
 Change 24h: {price.get('change_pct')}% ({price.get('change')} USD)
@@ -244,23 +258,37 @@ TradingView Signals (Interval: {tv.get('timeframe')}):
     if not news_info:
         news_info = "No recent headlines available."
 
-    system_prompt = """
-You are a professional cryptocurrency research and trading intelligence system.
-Your job is to analyze the technical metrics from TradingView, current prices, and news, and formulate a clear, mathematical trading thesis.
-You MUST write all text descriptions, reasoning, and bullet points in Vietnamese.
+    # Run specialists in parallel in the event loop executor pool
+    import asyncio
+    loop = asyncio.get_running_loop()
+    
+    # Agent 1: Bullish Specialist (phe Bò)
+    bull_sys = "Bạn là chuyên gia phân tích kỹ thuật theo phe Bò (Bullish). Hãy viết báo cáo lập luận thuyết phục vì sao BTC sẽ tăng giá từ mức hiện tại và đề xuất mốc giá mục tiêu cụ thể lớn hơn giá hiện tại, viết bằng tiếng Việt ngắn gọn tối đa 3 câu."
+    bull_user = f"Giá hiện tại: {current_price} USD, RSI: {rsi_val}, MACD Line: {macd_val}, Kháng cự R1: {r1}, R2: {r2}."
+    
+    task_bull = loop.run_in_executor(
+        None,
+        lambda: safe_openai_call(pool_bull, bull_sys, bull_user, model)
+    )
+    
+    # Agent 2: Bearish Specialist (phe Gấu)
+    bear_sys = "Bạn là chuyên gia phân tích kỹ thuật theo phe Gấu (Bearish). Hãy viết báo cáo lập luận thuyết phục vì sao BTC sẽ giảm giá từ mức hiện tại và đề xuất mốc giá mục tiêu cụ thể nhỏ hơn giá hiện tại, viết bằng tiếng Việt ngắn gọn tối đa 3 câu."
+    bear_user = f"Giá hiện tại: {current_price} USD, RSI: {rsi_val}, MACD Line: {macd_val}, Hỗ trợ S1: {s1}, S2: {s2}."
+    
+    task_bear = loop.run_in_executor(
+        None,
+        lambda: safe_openai_call(pool_bear, bear_sys, bear_user, model)
+    )
+    
+    # Await concurrent debate results
+    bull_report, bear_report = await asyncio.gather(task_bull, task_bear)
+    
+    # Agent 3: Referee AI (Trọng tài)
+    referee_sys = """
+You are a professional cryptocurrency research and trading intelligence system acting as the Technical Analysis Referee.
+Your job is to analyze the technical metrics from TradingView, read the Bullish debate and Bearish debate, and decide which scenario has the highest probability of occurring.
+You MUST write all text descriptions, reasoning, and decision in Vietnamese.
 You must return your output strictly in JSON format.
-
-CRITICAL INSTRUCTIONS FOR PROBABILITY CALCULATION:
-- Do NOT output rounded probabilities (like 70%, 80%, or 50% unless it is a perfect tie).
-- Calculate a precise composite probability score for bullish vs bearish based on:
-  * RSI (value vs 50 baseline): weight 20%
-  * MACD Crossover state and trend: weight 20%
-  * ADX trend strength (value + DI comparison): weight 15%
-  * Stochastic Oscillator: weight 15%
-  * Bollinger Bands width and price position: weight 15%
-  * SMA/EMA trend alignment: weight 15%
-- The probabilities MUST fluctuate granularly (e.g. 61% vs 39%, 56% vs 44%, 48% vs 52%, etc.) reflecting the minor real-time ticks of indicators.
-- The probability percentage for the dominant side must be between 40% and 100%.
 
 CRITICAL INSTRUCTIONS FOR TARGET PRICE ACCURACY:
 - Để đảm bảo giá mục tiêu (target_price) có XÁC SUẤT XẢY RA CAO NHẤT:
@@ -269,11 +297,6 @@ CRITICAL INSTRUCTIONS FOR TARGET PRICE ACCURACY:
   * Nếu xu hướng là GIẢM (BEARISH/STRONG SELL), hãy chọn mục tiêu giá nằm gần Hỗ trợ 1 (S1), không được thấp hơn S1 trừ khi ADX cực mạnh (> 40).
   * Nếu xu hướng đi ngang (HOLD/NEUTRAL), hãy đặt mục tiêu cực kỳ sát giá hiện tại (chênh lệch tuyệt đối dưới 0.25%).
   * Điều này đảm bảo mục tiêu giá có độ khả thi và xác suất chiến thắng cao nhất trong ngắn hạn.
-
-CRITICAL INSTRUCTION FOR TIMEFRAME COUNTDOWN:
-- Calculate the target countdown minutes (target_timeframe_minutes) using the formula: (abs(target_price - current_price) / ATR) * 60 minutes.
-- Return this prediction in the 'target_timeframe_minutes' key as an exact integer. Do not make it static (e.g. do not just return 90).
-- Also return a friendly text representation in the 'target_timeframe' key (e.g. "trong vòng 45 phút", "trong 3 giờ tới").
 
 The JSON must contain exactly these keys:
 {
@@ -284,51 +307,10 @@ The JSON must contain exactly these keys:
   "target_price": <float representing specific target price BTC will run to next>,
   "target_timeframe": "<string representing expected time>",
   "target_timeframe_minutes": <integer representing minutes to target for the live countdown>,
-  "reasoning": "<Tóm tắt nhận định bằng tiếng Việt (2-3 câu)>",
-  "bullish_thesis_points": [
-    "<Luận điểm tăng giá 1 bằng tiếng Việt>",
-    "<Luận điểm tăng giá 2 bằng tiếng Việt>",
-    "<Luận điểm tăng giá 3 bằng tiếng Việt>"
-  ],
-  "bearish_thesis_points": [
-    "<Luận điểm giảm giá 1 bằng tiếng Việt>",
-    "<Luận điểm giảm giá 2 bằng tiếng Việt>",
-    "<Luận điểm giảm giá 3 bằng tiếng Việt>"
-  ]
+  "reasoning": "<Trọng tài kết luận phản biện khách quan đối với lập luận của cả hai phe (tiếng Việt, 2-3 câu)>"
 }
 """
-
-    # 1. Phe Bò (Bullish Specialist) Call
-    try:
-        bull_response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "Bạn là chuyên gia phân tích kỹ thuật theo phe Bò (Bullish). Hãy viết báo cáo lập luận thuyết phục vì sao BTC sẽ tăng giá từ mức hiện tại và đề xuất mốc giá mục tiêu cụ thể lớn hơn giá hiện tại, viết bằng tiếng Việt ngắn gọn tối đa 3 câu."},
-                {"role": "user", "content": f"Giá hiện tại: {current_price} USD, RSI: {rsi_val}, MACD Line: {macd_val}, Kháng cự R1: {r1}, R2: {r2}."}
-            ],
-            temperature=0.3,
-            max_tokens=250
-        )
-        bull_report = bull_response.choices[0].message.content
-    except Exception as e:
-        bull_report = f"Phe Bò lập luận xu hướng tăng giá dựa trên việc RSI tích lũy tích cực và MACD cho tín hiệu hội tụ. Mục tiêu giá kỳ vọng hướng tới vùng {current_price + 350}."
-
-    # 2. Phe Gấu (Bearish Specialist) Call
-    try:
-        bear_response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "Bạn là chuyên gia phân tích kỹ thuật theo phe Gấu (Bearish). Hãy viết báo cáo lập luận thuyết phục vì sao BTC sẽ giảm giá từ mức hiện tại và đề xuất mốc giá mục tiêu cụ thể nhỏ hơn giá hiện tại, viết bằng tiếng Việt ngắn gọn tối đa 3 câu."},
-                {"role": "user", "content": f"Giá hiện tại: {current_price} USD, RSI: {rsi_val}, MACD Line: {macd_val}, Hỗ trợ S1: {s1}, S2: {s2}."}
-            ],
-            temperature=0.3,
-            max_tokens=250
-        )
-        bear_report = bear_response.choices[0].message.content
-    except Exception as e:
-        bear_report = f"Phe Gấu lập luận xu hướng giảm giá do áp lực bán tại cản kháng cự và khối lượng phân phối tăng nhẹ. Mục tiêu giá kỳ vọng hướng tới vùng {current_price - 350}."
-
-    user_prompt = f"""
+    referee_user = f"""
 Please analyze this market data and debate reports for Bitcoin:
 
 [Market Price Data]
@@ -351,32 +333,25 @@ Please analyze this market data and debate reports for Bitcoin:
 - DO NOT copy the examples in the system prompt instructions.
 - CẤM TUYỆT ĐỐI không được trả về giá trị trùng khít hoàn toàn với các mức R1={r1}, R2={r2}, S1={s1}, S2={s2} hay Pivot={pivot}.
 - Target Price (target_price) phải là một số lẻ thập phân cụ thể di động liên tục theo giá hiện tại.
-- Trọng tài phải đối chiếu báo cáo của Phe Bò và Phe Gấu với các thông số kỹ thuật thực tế để chọn ra kịch bản có xác suất xảy ra cao nhất.
-- Nhận định (reasoning) phải thể hiện rõ góc nhìn phản biện khách quan của trọng tài đối với lập luận của cả hai phe (viết bằng tiếng Việt, 2-3 câu).
 """
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        temperature=0.25,
-        response_format={"type": "json_object"}
+    referee_content = await loop.run_in_executor(
+        None,
+        lambda: safe_openai_call(pool_ref, referee_sys, referee_user, model, json_mode=True)
     )
-
+    
+    # Process final result
     try:
-        content = response.choices[0].message.content
-        result = json.loads(content)
+        import json
+        result = json.loads(referee_content)
         
-        # Calculate target_timeframe and target_timeframe_minutes programmatically
-        # to ensure 100% mathematical accuracy based on current price & ATR
+        # Calculate target_timeframe programmatically
         try:
             t_price = float(result.get("target_price") or current_price)
             price_diff = abs(t_price - current_price)
             
             tf = tv.get("timeframe") or "1h"
-            tf_factor = 60.0 # minutes per candle
+            tf_factor = 60.0
             if tf == "15m":
                 tf_factor = 15.0
             elif tf == "4h":
@@ -391,11 +366,10 @@ Please analyze this market data and debate reports for Bitcoin:
                 
             target_minutes = int(round(expected_mins))
             if target_minutes < 15:
-                target_minutes = 15 # minimum reasonable bound
+                target_minutes = 15
                 
             result["target_timeframe_minutes"] = target_minutes
             
-            # Format friendly Vietnamese string
             hrs = target_minutes // 60
             mins = target_minutes % 60
             if hrs > 0:
@@ -406,13 +380,12 @@ Please analyze this market data and debate reports for Bitcoin:
             result["target_timeframe_minutes"] = 120
             result["target_timeframe"] = "khoảng 2 giờ"
             
-        # Calculate probability_bullish and probability_bearish programmatically
-        # to ensure 100% mathematical responsiveness to real-time indicators
+        # Calculate probability programmatically
         try:
-            rsi_val = tv.get("rsi", {}).get("value")
-            if rsi_val is None:
-                rsi_val = 50.0
-            rsi_contrib = rsi_val / 100.0
+            rsi_val_num = tv.get("rsi", {}).get("value")
+            if rsi_val_num is None:
+                rsi_val_num = 50.0
+            rsi_contrib = rsi_val_num / 100.0
             
             macd = tv.get("macd", {})
             macd_line = macd.get("macd_line") or 0.0
@@ -459,7 +432,6 @@ Please analyze this market data and debate reports for Bitcoin:
             
             result["probability_bullish"] = prob_bull
             result["probability_bearish"] = prob_bear
-            
         except Exception:
             result["probability_bullish"] = 55
             result["probability_bearish"] = 45
@@ -470,18 +442,18 @@ Please analyze this market data and debate reports for Bitcoin:
             "bearish_debate": bear_report
         }
     except Exception as e:
-        # Fallback in case of JSON parse error
         return {
             "referee_decision": {
                 "decision": "HOLD",
                 "confidence": 50,
                 "probability_bullish": 50,
                 "probability_bearish": 50,
-                "target_price": price.get("price", 60000.0),
+                "target_price": current_price,
                 "target_timeframe": "Không xác định",
                 "target_timeframe_minutes": 120,
-                "reasoning": f"Lỗi phân tích phản hồi Groq: {str(e)}"
+                "reasoning": f"Lỗi phân tích trọng tài: {str(e)}"
             },
-            "bullish_debate": "Không có báo cáo phe Bò do lỗi hệ thống.",
-            "bearish_debate": "Không có báo cáo phe Gấu do lỗi hệ thống."
+            "bullish_debate": bull_report,
+            "bearish_debate": bear_report
         }
+
