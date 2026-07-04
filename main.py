@@ -121,14 +121,16 @@ async def run_analysis(
         if "error" in tv_details:
             raise Exception(f"TradingView analysis failed: {tv_details['error']}")
             
-        # Step 3: News (wrapped with a 3.0s timeout to prevent hanging on slow RSS feeds)
-        import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(fetch_news, symbol="BTC", category="crypto", limit=5)
-            try:
-                news_details = future.result(timeout=3.0)
-            except concurrent.futures.TimeoutError:
-                news_details = []
+        # Step 3: News (run asynchronously in executor with a 3.0s timeout to prevent blocking ASGI event loop)
+        import asyncio
+        loop = asyncio.get_running_loop()
+        try:
+            news_details = await asyncio.wait_for(
+                loop.run_in_executor(None, lambda: fetch_news(symbol="BTC", category="crypto", limit=5)),
+                timeout=3.0
+            )
+        except asyncio.TimeoutError:
+            news_details = []
         
         # Step 4: AI Analysis using Groq
         ai_verdict = analyze_with_groq(api_key, model, price_details, tv_details, news_details)
