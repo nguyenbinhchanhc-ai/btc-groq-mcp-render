@@ -1,3 +1,13 @@
+# Monkey patch requests to bypass TradingView Cloudflare blocks on Render (datacenter IPs)
+import requests
+original_post = requests.post
+def custom_post(url, *args, **kwargs):
+    headers = kwargs.get("headers", {})
+    if "tradingview.com" in url:
+        headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        kwargs["headers"] = headers
+    return original_post(url, *args, **kwargs)
+requests.post = custom_post
 import os
 import sys
 from typing import Optional
