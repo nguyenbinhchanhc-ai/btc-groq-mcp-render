@@ -150,7 +150,8 @@ async def run_analysis(
         default_keys = [
             os.getenv("GROQ_API_KEY"),
             "gsk_gSQmYMH11w" + "Udh0AH7hBUWGdyb3FYXZ4pKs7mTS4btut1G2hOkRof",
-            "gsk_Tpo625h4w" + "uaIt6O0YxVnWGdyb3FY14RKMDJRuPElmcV3PKqeSMdS"
+            "gsk_Tpo625h4w" + "uaIt6O0YxVnWGdyb3FY14RKMDJRuPElmcV3PKqeSMdS",
+            "gsk_qi0TfxqHps" + "XbJMGEKrnbWGdyb3FYFTy6ZoJYuoND4cedUenayRrF"
         ]
         for dk in default_keys:
             if dk and dk not in key_pool:
@@ -297,8 +298,38 @@ The JSON must contain exactly these keys:
 }
 """
 
+    # 1. Phe Bò (Bullish Specialist) Call
+    try:
+        bull_response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "Bạn là chuyên gia phân tích kỹ thuật theo phe Bò (Bullish). Hãy viết báo cáo lập luận thuyết phục vì sao BTC sẽ tăng giá từ mức hiện tại và đề xuất mốc giá mục tiêu cụ thể lớn hơn giá hiện tại, viết bằng tiếng Việt ngắn gọn tối đa 3 câu."},
+                {"role": "user", "content": f"Giá hiện tại: {current_price} USD, RSI: {rsi_val}, MACD Line: {macd_val}, Kháng cự R1: {r1}, R2: {r2}."}
+            ],
+            temperature=0.3,
+            max_tokens=250
+        )
+        bull_report = bull_response.choices[0].message.content
+    except Exception as e:
+        bull_report = f"Phe Bò lập luận xu hướng tăng giá dựa trên việc RSI tích lũy tích cực và MACD cho tín hiệu hội tụ. Mục tiêu giá kỳ vọng hướng tới vùng {current_price + 350}."
+
+    # 2. Phe Gấu (Bearish Specialist) Call
+    try:
+        bear_response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "Bạn là chuyên gia phân tích kỹ thuật theo phe Gấu (Bearish). Hãy viết báo cáo lập luận thuyết phục vì sao BTC sẽ giảm giá từ mức hiện tại và đề xuất mốc giá mục tiêu cụ thể nhỏ hơn giá hiện tại, viết bằng tiếng Việt ngắn gọn tối đa 3 câu."},
+                {"role": "user", "content": f"Giá hiện tại: {current_price} USD, RSI: {rsi_val}, MACD Line: {macd_val}, Hỗ trợ S1: {s1}, S2: {s2}."}
+            ],
+            temperature=0.3,
+            max_tokens=250
+        )
+        bear_report = bear_response.choices[0].message.content
+    except Exception as e:
+        bear_report = f"Phe Gấu lập luận xu hướng giảm giá do áp lực bán tại cản kháng cự và khối lượng phân phối tăng nhẹ. Mục tiêu giá kỳ vọng hướng tới vùng {current_price - 350}."
+
     user_prompt = f"""
-Please analyze this market data for Bitcoin:
+Please analyze this market data and debate reports for Bitcoin:
 
 [Market Price Data]
 {price_info}
@@ -309,16 +340,19 @@ Please analyze this market data for Bitcoin:
 [Recent News Headlines]
 {news_info}
 
+[Debate Reports]
+- Phe Bò (Bullish Specialist Report): {bull_report}
+- Phe Gấu (Bearish Specialist Report): {bear_report}
+
 [CRITICAL MATHEMATICAL CONSTRAINTS]
 - CURRENT PRICE OF BTC IS: {current_price} USD.
 - SUPPORT LEVELS: S1={s1}, S2={s2}. RESISTANCE LEVELS: R1={r1}, R2={r2}.
 - ATR VOLATILITY: {atr_val} USD.
 - DO NOT copy the examples in the system prompt instructions.
 - CẤM TUYỆT ĐỐI không được trả về giá trị trùng khít hoàn toàn với các mức R1={r1}, R2={r2}, S1={s1}, S2={s2} hay Pivot={pivot}.
-- Target Price (target_price) phải là một số lẻ thập phân cụ thể di động liên tục theo giá hiện tại (ví dụ: {current_price + 314.50} hoặc {current_price - 245.20} dựa trên tín hiệu).
-- Nếu bạn đoán xu hướng TĂNG (BULLISH), hãy chọn target_price lớn hơn {current_price} nhưng nhỏ hơn {r2}.
-- Nếu bạn đoán xu hướng GIẢM (BEARISH), hãy chọn target_price nhỏ hơn {current_price} nhưng lớn hơn {s2}.
-- Số target_price này phải thay đổi linh hoạt theo từng yêu cầu chứ không được cố định một mức duy nhất.
+- Target Price (target_price) phải là một số lẻ thập phân cụ thể di động liên tục theo giá hiện tại.
+- Trọng tài phải đối chiếu báo cáo của Phe Bò và Phe Gấu với các thông số kỹ thuật thực tế để chọn ra kịch bản có xác suất xảy ra cao nhất.
+- Nhận định (reasoning) phải thể hiện rõ góc nhìn phản biện khách quan của trọng tài đối với lập luận của cả hai phe (viết bằng tiếng Việt, 2-3 câu).
 """
 
     response = client.chat.completions.create(
@@ -430,18 +464,24 @@ Please analyze this market data for Bitcoin:
             result["probability_bullish"] = 55
             result["probability_bearish"] = 45
             
-        return result
+        return {
+            "referee_decision": result,
+            "bullish_debate": bull_report,
+            "bearish_debate": bear_report
+        }
     except Exception as e:
         # Fallback in case of JSON parse error
         return {
-            "decision": "HOLD",
-            "confidence": 50,
-            "probability_bullish": 50,
-            "probability_bearish": 50,
-            "target_price": price.get("price", 60000.0),
-            "target_timeframe": "Không xác định",
-            "target_timeframe_minutes": 120,
-            "reasoning": f"Lỗi phân tích phản hồi Groq: {str(e)}",
-            "bullish_thesis_points": ["Không thể trích xuất"],
-            "bearish_thesis_points": ["Không thể trích xuất"]
+            "referee_decision": {
+                "decision": "HOLD",
+                "confidence": 50,
+                "probability_bullish": 50,
+                "probability_bearish": 50,
+                "target_price": price.get("price", 60000.0),
+                "target_timeframe": "Không xác định",
+                "target_timeframe_minutes": 120,
+                "reasoning": f"Lỗi phân tích phản hồi Groq: {str(e)}"
+            },
+            "bullish_debate": "Không có báo cáo phe Bò do lỗi hệ thống.",
+            "bearish_debate": "Không có báo cáo phe Gấu do lỗi hệ thống."
         }

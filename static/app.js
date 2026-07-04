@@ -61,6 +61,12 @@ const elements = {
     probFillBear: document.getElementById('prob-fill-bear'),
     targetCountdown: document.getElementById('target-countdown'),
     
+    // Debate Console
+    debateConsoleSection: document.getElementById('debate-console-section'),
+    bullThesisText: document.getElementById('bull-thesis-text'),
+    bearThesisText: document.getElementById('bear-thesis-text'),
+    refereeJudgmentText: document.getElementById('referee-judgment-text'),
+    
     // Indicators Table
     indicatorsTableBody: document.getElementById('indicators-table-body'),
     updateCountdown: document.getElementById('update-countdown'),
@@ -73,10 +79,10 @@ const elements = {
 // Loading step text sequences in Vietnamese
 const loadingSteps = [
     "Đang kết nối tới TradingView MCP...",
-    "Truy vấn dữ liệu thời gian thực từ Binance...",
-    "Lấy biến động giá và khối lượng từ Yahoo Finance...",
-    "Tính toán tất cả các chỉ báo kỹ thuật liên quan...",
-    "Kích hoạt mô hình AI Groq tính toán xác suất & mục tiêu giá..."
+    "Lấy dữ liệu phe Bò (Bullish Agent)...",
+    "Lấy dữ liệu phe Gấu (Bearish Agent)...",
+    "Trọng tài (Referee Agent) đang đối chiếu lập luận...",
+    "Tổng hợp xác suất xảy ra cao nhất..."
 ];
 
 // Translators for UI signals
@@ -227,7 +233,7 @@ function checkApiKeyStatus() {
     const indicator = elements.apiStatus.querySelector('.status-indicator');
     const label = elements.apiStatus.querySelector('.status-label');
     
-    if (key && key.startsWith('gsk_')) {
+    if (key && key.includes('gsk_')) {
         indicator.className = 'status-indicator green';
         label.innerText = 'Groq API Key Sẵn Sàng';
     } else {
@@ -520,7 +526,7 @@ async function runMarketAnalysis() {
     const stepInterval = setInterval(() => {
         stepIdx = (stepIdx + 1) % loadingSteps.length;
         elements.loadingStep.innerText = loadingSteps[stepIdx];
-    }, 2500);
+    }, 2000);
 
     const apiKey = localStorage.getItem('groq-api-key') || '';
     
@@ -577,7 +583,11 @@ function renderAIResults(data) {
         elements.marketExchange.innerText = data.technical_details.exchange;
     }
     
-    const ai = data.ai_analysis;
+    // AI analysis wraps the referee decision and two debate reports
+    const rawAi = data.ai_analysis;
+    const ai = rawAi.referee_decision || {};
+    const bullDebate = rawAi.bullish_debate || '';
+    const bearDebate = rawAi.bearish_debate || '';
     
     // 1. Verdict decision
     const verdict = ai.decision || 'HOLD';
@@ -611,4 +621,10 @@ function renderAIResults(data) {
     elements.bearishPct.innerText = `${bearPct}% GIẢM`;
     elements.probFillBull.style.width = `${bullPct}%`;
     elements.probFillBear.style.width = `${bearPct}%`;
+    
+    // 5. Populate Multi-Agent debate box
+    if (elements.bullThesisText) elements.bullThesisText.innerText = bullDebate;
+    if (elements.bearThesisText) elements.bearThesisText.innerText = bearDebate;
+    if (elements.refereeJudgmentText) elements.refereeJudgmentText.innerText = ai.reasoning || '';
+    if (elements.debateConsoleSection) elements.debateConsoleSection.classList.remove('hidden');
 }
