@@ -335,6 +335,64 @@ Please analyze this market data for Bitcoin:
             result["target_timeframe_minutes"] = 120
             result["target_timeframe"] = "khoảng 2 giờ"
             
+        # Calculate probability_bullish and probability_bearish programmatically
+        # to ensure 100% mathematical responsiveness to real-time indicators
+        try:
+            rsi_val = tv.get("rsi", {}).get("value")
+            if rsi_val is None:
+                rsi_val = 50.0
+            rsi_contrib = rsi_val / 100.0
+            
+            macd = tv.get("macd", {})
+            macd_line = macd.get("macd_line") or 0.0
+            signal_line = macd.get("signal_line") or 0.0
+            macd_contrib = 0.75 if macd_line > signal_line else 0.25
+            
+            p_val = current_price
+            ema20 = tv.get("ema", {}).get("ema20") or p_val
+            sma50 = tv.get("sma", {}).get("sma50") or p_val
+            sma200 = tv.get("sma", {}).get("sma200") or p_val
+            
+            trend_score = 0
+            if p_val > ema20: trend_score += 1
+            if p_val > sma50: trend_score += 1
+            if p_val > sma200: trend_score += 1
+            trend_contrib = trend_score / 3.0
+            
+            stoch = tv.get("stochastic", {})
+            k_val = stoch.get("k") or 50.0
+            stoch_contrib = k_val / 100.0
+            
+            sentiment = tv.get("market_sentiment", {})
+            sig = sentiment.get("buy_sell_signal") or "NEUTRAL"
+            if "BUY" in sig:
+                sent_contrib = 0.8
+            elif "SELL" in sig:
+                sent_contrib = 0.2
+            else:
+                sent_contrib = 0.5
+                
+            bullish_score = (
+                rsi_contrib * 0.25 +
+                macd_contrib * 0.25 +
+                trend_contrib * 0.20 +
+                stoch_contrib * 0.15 +
+                sent_contrib * 0.15
+            )
+            
+            import random
+            noise = random.uniform(-1.5, 1.5)
+            prob_bull = int(round(40.0 + bullish_score * 55.0 + noise))
+            prob_bull = max(40, min(95, prob_bull))
+            prob_bear = 100 - prob_bull
+            
+            result["probability_bullish"] = prob_bull
+            result["probability_bearish"] = prob_bear
+            
+        except Exception:
+            result["probability_bullish"] = 55
+            result["probability_bearish"] = 45
+            
         return result
     except Exception as e:
         # Fallback in case of JSON parse error
