@@ -171,10 +171,13 @@ async def run_analysis(
 
 def safe_openai_call(key_pool: list, system_prompt: str, user_prompt: str, model: str, json_mode: bool = False) -> str:
     """
-    Tries calling OpenAI using keys in key_pool sequentially as fallback
+    Tries calling OpenAI using keys in key_pool sequentially.
+    If the requested model fails (e.g. rate limit), falls back to llama-3.1-8b-instant.
     """
     from openai import OpenAI
     last_err = None
+    
+    # 1. Try requested model
     for key in key_pool:
         if not key:
             continue
@@ -194,9 +197,36 @@ def safe_openai_call(key_pool: list, system_prompt: str, user_prompt: str, model
             return response.choices[0].message.content
         except Exception as e:
             last_err = str(e)
-            print(f"Key {key[:15]} failed: {last_err}")
+            print(f"Key {key[:15]} failed on model {model}: {last_err}")
             continue
-    raise Exception(f"Tất cả API keys trong bể luân phiên đều thất bại. Lỗi cuối cùng: {last_err}")
+            
+    # 2. Try fallback model if the requested model was not already the fallback
+    fallback_model = "llama-3.1-8b-instant"
+    if model != fallback_model:
+        print(f"Failed on {model}, trying fallback to {fallback_model}...")
+        for key in key_pool:
+            if not key:
+                continue
+            try:
+                client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=key)
+                kwargs = {
+                    "model": fallback_model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "temperature": 0.25
+                }
+                if json_mode:
+                    kwargs["response_format"] = {"type": "json_object"}
+                response = client.chat.completions.create(**kwargs)
+                return response.choices[0].message.content
+            except Exception as e:
+                last_err = str(e)
+                print(f"Key {key[:15]} failed on fallback model {fallback_model}: {last_err}")
+                continue
+                
+    raise Exception(f"Tất cả API keys và các mô hình dự phòng đều thất bại. Lỗi cuối cùng: {last_err}")
 
 async def analyze_with_groq_fallback(api_keys: list, model: str, price: dict, tv: dict, news: list) -> dict:
     """
