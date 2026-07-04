@@ -391,14 +391,14 @@ function renderIndicatorsTable(tv) {
             name: 'Awesome Oscillator (AO)',
             val: (ao.value || 0).toFixed(2),
             sig: translate(ao.signal),
-            desc: ao.signal.includes('Bullish') ? 'Động lượng AO chuyển sang dương' : 'Động lượng AO chuyển sang âm'
+            desc: (ao.signal || '').includes('Bullish') ? 'Động lượng AO chuyển sang dương' : 'Động lượng AO chuyển sang âm'
         },
         {
             group: 'Động lượng',
             name: 'Momentum (MOM)',
             val: (mom.value || 0).toFixed(2),
             sig: translate(mom.signal),
-            desc: mom.signal.includes('Bullish') ? 'Tốc độ tăng giá đang gia tăng' : 'Tốc độ giảm giá đang gia tăng'
+            desc: (mom.signal || '').includes('Bullish') ? 'Tốc độ tăng giá đang gia tăng' : 'Tốc độ giảm giá đang gia tăng'
         },
         {
             group: 'Động lượng',
