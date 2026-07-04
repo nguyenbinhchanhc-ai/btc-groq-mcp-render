@@ -296,7 +296,46 @@ Please analyze this market data for Bitcoin:
 
     try:
         content = response.choices[0].message.content
-        return json.loads(content)
+        result = json.loads(content)
+        
+        # Calculate target_timeframe and target_timeframe_minutes programmatically
+        # to ensure 100% mathematical accuracy based on current price & ATR
+        try:
+            t_price = float(result.get("target_price") or current_price)
+            price_diff = abs(t_price - current_price)
+            
+            tf = tv.get("timeframe") or "1h"
+            tf_factor = 60.0 # minutes per candle
+            if tf == "15m":
+                tf_factor = 15.0
+            elif tf == "4h":
+                tf_factor = 240.0
+            elif tf == "1D":
+                tf_factor = 1440.0
+                
+            if atr_val and atr_val > 0:
+                expected_mins = (price_diff / atr_val) * tf_factor
+            else:
+                expected_mins = 60.0
+                
+            target_minutes = int(round(expected_mins))
+            if target_minutes < 15:
+                target_minutes = 15 # minimum reasonable bound
+                
+            result["target_timeframe_minutes"] = target_minutes
+            
+            # Format friendly Vietnamese string
+            hrs = target_minutes // 60
+            mins = target_minutes % 60
+            if hrs > 0:
+                result["target_timeframe"] = f"khoảng {hrs} giờ {mins} phút" if mins > 0 else f"khoảng {hrs} giờ"
+            else:
+                result["target_timeframe"] = f"khoảng {mins} phút"
+        except Exception:
+            result["target_timeframe_minutes"] = 120
+            result["target_timeframe"] = "khoảng 2 giờ"
+            
+        return result
     except Exception as e:
         # Fallback in case of JSON parse error
         return {
