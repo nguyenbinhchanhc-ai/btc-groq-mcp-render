@@ -55,7 +55,7 @@
         <!-- Main Dashboard Layout (2-Column) -->
         <main class="dashboard-grid-2col">
             
-            <!-- COLUMN 1 (LEFT): Quote, S/R Levels, News -->
+            <!-- COLUMN 1 (LEFT): Quote, S/R Levels -->
             <div class="dashboard-sidebar">
                 
                 <!-- 1. Price Quote -->
@@ -133,21 +133,6 @@
                     </div>
                 </section>
 
-                <!-- 3. News Section -->
-                <section class="card-glass panel-padding">
-                    <div class="card-header">
-                        <h2><i class="fa-solid fa-newspaper text-cyan"></i> Tin tức thị trường</h2>
-                        <span class="source-tag">Kênh RSS</span>
-                    </div>
-                    <div class="news-list" id="news-container">
-                        <div class="news-item">
-                            <span class="news-time">Vừa xong</span>
-                            <a href="#" class="news-title">Nhấn "Chạy phân tích" để tải tin tức thị trường mới nhất</a>
-                            <span class="news-source">Hệ thống</span>
-                        </div>
-                    </div>
-                </section>
-
             </div>
 
             <!-- COLUMN 2 (RIGHT): AI Forecast (top) + Stats Table (bottom) -->
@@ -164,7 +149,7 @@
                     <div class="analysis-empty-state" id="analysis-empty">
                         <div class="empty-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
                         <h3>Sẵn sàng tính toán xác suất & mục tiêu giá</h3>
-                        <p>Nhấp vào "Chạy phân tích" để kích hoạt thuật toán AI Groq tổng hợp chỉ báo và xác định cụ thể mốc giá chạy đến.</p>
+                        <p>Hệ thống tự động tính toán xác suất tăng giảm và thời gian đếm ngược theo thời gian thực mỗi 30 giây.</p>
                     </div>
 
                     <!-- Loading State -->
@@ -187,7 +172,12 @@
                             <div class="ai-metric-card target-card">
                                 <span class="card-lbl">Mục tiêu giá chạy đến (Target)</span>
                                 <div class="target-price-display" id="ai-target-price">$ --,---.--</div>
-                                <span class="timeframe-text"><i class="fa-solid fa-clock"></i> Khung thời gian: <strong id="ai-target-timeframe">--</strong></span>
+                                <span class="timeframe-text" style="margin-top: 4px;">
+                                    <i class="fa-solid fa-hourglass-half text-cyan"></i> Đếm ngược: <strong id="target-countdown" style="color: var(--neon-cyan); font-size: 13px; font-family: var(--font-outfit);">--:--:--</strong>
+                                </span>
+                                <span class="timeframe-text" style="font-size: 9px; opacity: 0.7; margin-top: -2px;">
+                                    Dự kiến: <span id="ai-target-timeframe">--</span>
+                                </span>
                             </div>
 
                             <div class="ai-metric-card probability-card">
@@ -204,28 +194,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Core Reason box -->
-                        <div class="justification-box">
-                            <h3>Tóm tắt nhận định & Luận chứng</h3>
-                            <p id="ai-justification">Chưa có phân tích.</p>
-                        </div>
-
-                        <!-- Bully/Bear lists -->
-                        <div class="thesis-columns">
-                            <div class="thesis-col bullish-thesis">
-                                <h3><i class="fa-solid fa-circle-chevron-up text-green"></i> Luận điểm tăng giá</h3>
-                                <ul id="bullish-points">
-                                    <li>Đang chờ...</li>
-                                </ul>
-                            </div>
-                            <div class="thesis-col bearish-thesis">
-                                <h3><i class="fa-solid fa-circle-chevron-down text-red"></i> Luận điểm giảm giá</h3>
-                                <ul id="bearish-points">
-                                    <li>Đang chờ...</li>
-                                </ul>
-                            </div>
-                        </div>
                     </div>
                 </section>
 
@@ -233,7 +201,7 @@
                 <section class="card-glass panel-padding">
                     <div class="card-header">
                         <h2><i class="fa-solid fa-table text-purple"></i> Bảng thống kê chi tiết toàn bộ chỉ báo kỹ thuật</h2>
-                        <span class="update-countdown-tag" id="update-countdown">Cập nhật tự động sau: --s</span>
+                        <span class="update-countdown-tag" id="update-countdown">Tự động cập nhật sau: --s</span>
                     </div>
                     <div class="indicators-table-wrapper">
                         <table class="indicators-stats-table">
@@ -249,7 +217,7 @@
                             <tbody id="indicators-table-body">
                                 <tr>
                                     <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">
-                                        Nhấn nút "Chạy phân tích" ở góc phải để nạp thông số kỹ thuật thời gian thực từ TradingView.
+                                        Đang nạp dữ liệu từ TradingView...
                                     </td>
                                 </tr>
                             </tbody>

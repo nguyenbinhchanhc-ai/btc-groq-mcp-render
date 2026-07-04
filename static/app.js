@@ -6,6 +6,10 @@ let lastFetchedPrice = 0;
 let countdownSeconds = 30;
 let countdownInterval = null;
 
+// Target Price Countdown variables
+let targetCountdownSeconds = 0;
+let targetCountdownInterval = null;
+
 // DOM Elements
 const elements = {
     runBtn: document.getElementById('run-analysis'),
@@ -55,17 +59,12 @@ const elements = {
     bearishPct: document.getElementById('bearish-pct'),
     probFillBull: document.getElementById('prob-fill-bull'),
     probFillBear: document.getElementById('prob-fill-bear'),
-    aiJustification: document.getElementById('ai-justification'),
-    bullishPoints: document.getElementById('bullish-points'),
-    bearishPoints: document.getElementById('bearish-points'),
+    targetCountdown: document.getElementById('target-countdown'),
     
     // Indicators Table
     indicatorsTableBody: document.getElementById('indicators-table-body'),
     updateCountdown: document.getElementById('update-countdown'),
 
-    // News
-    newsContainer: document.getElementById('news-container'),
-    
     // Toast
     toast: document.getElementById('toast'),
     toastMsg: document.getElementById('toast-message')
@@ -76,9 +75,7 @@ const loadingSteps = [
     "Đang kết nối tới TradingView MCP...",
     "Truy vấn dữ liệu thời gian thực từ Binance...",
     "Lấy biến động giá và khối lượng từ Yahoo Finance...",
-    "Đọc các đầu báo và tin tức crypto mới nhất...",
     "Tính toán tất cả các chỉ báo kỹ thuật liên quan...",
-    "Đang phân tích và kiểm chứng chéo độ chính xác...",
     "Kích hoạt mô hình AI Groq tính toán xác suất & mục tiêu giá..."
 ];
 
@@ -154,6 +151,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Polling 2: Automatic loop to recalculate AI probabilities and targets every 30 seconds
     startAILoopTimer();
+    
+    // Polling 3: Live target countdown timer updates every 1 second
+    startTargetCountdown();
 });
 
 // Setup Event Listeners
@@ -245,7 +245,7 @@ function showToast(message) {
     }, 3000);
 }
 
-// Polling Timer for Auto-Calculation
+// Polling Timer for Auto-Calculation (30s)
 function startAILoopTimer() {
     countdownSeconds = 30;
     elements.updateCountdown.innerText = `Tự động cập nhật sau: ${countdownSeconds}s`;
@@ -263,6 +263,33 @@ function startAILoopTimer() {
 
 function resetAILoopTimer() {
     startAILoopTimer();
+}
+
+// Target Price Countdown (HH:MM:SS)
+function startTargetCountdown() {
+    if (targetCountdownInterval) clearInterval(targetCountdownInterval);
+    
+    targetCountdownInterval = setInterval(() => {
+        if (targetCountdownSeconds > 0) {
+            targetCountdownSeconds--;
+            updateTargetCountdownUI();
+        } else {
+            if (elements.targetCountdown) {
+                elements.targetCountdown.innerText = "Đang tính lại...";
+            }
+        }
+    }, 1000);
+}
+
+function updateTargetCountdownUI() {
+    if (!elements.targetCountdown) return;
+    
+    const hrs = Math.floor(targetCountdownSeconds / 3600);
+    const mins = Math.floor((targetCountdownSeconds % 3600) / 60);
+    const secs = targetCountdownSeconds % 60;
+    
+    const pad = (n) => String(n).padStart(2, '0');
+    elements.targetCountdown.innerText = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
 }
 
 // Fetch live price quote only
@@ -389,7 +416,7 @@ function renderIndicatorsTable(tv) {
             name: 'Đường EMA (20) Ngắn',
             val: Math.round(ema.ema20 || 0).toLocaleString(),
             sig: price > (ema.ema20 || 0) ? 'MUA' : 'BÁN',
-            desc: price > (ema.ema20 || 0) ? 'Giá nằm trên EMA20 hỗ trợ ngắn hạn' : 'Giá nằm dưới EMA20 cản ngắn hạn'
+            desc: price > (ema.ema20 || 0) ? 'Giá nằm trên EMA20 cản/hỗ trợ ngắn hạn' : 'Giá nằm dưới EMA20 cản ngắn hạn'
         },
         {
             group: 'Xu hướng',
@@ -572,66 +599,16 @@ function renderAIResults(data) {
     elements.aiTargetPrice.innerText = targetVal ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(targetVal) : '$ --,---.--';
     elements.aiTargetTimeframe.innerText = ai.target_timeframe || '--';
     
-    // 3. Probabilities
+    // 3. Set target price countdown seconds
+    const timeframeMins = ai.target_timeframe_minutes || 120;
+    targetCountdownSeconds = Math.round(timeframeMins * 60);
+    updateTargetCountdownUI();
+    
+    // 4. Probabilities (Granular, calculated dynamically from 40% to 100%)
     const bullPct = ai.probability_bullish || 50;
     const bearPct = ai.probability_bearish || 50;
     elements.bullishPct.innerText = `${bullPct}% TĂNG`;
     elements.bearishPct.innerText = `${bearPct}% GIẢM`;
     elements.probFillBull.style.width = `${bullPct}%`;
     elements.probFillBear.style.width = `${bearPct}%`;
-    
-    // 4. Justifications & points
-    elements.aiJustification.innerText = ai.reasoning || ai.justification || 'Không có luận chứng tóm tắt.';
-    
-    elements.bullishPoints.innerHTML = '';
-    const bullPoints = ai.bullish_thesis_points || ai.bullish_thesis || [];
-    if (bullPoints.length === 0) {
-        elements.bullishPoints.innerHTML = '<li>Không phát hiện luận điểm tăng giá cụ thể.</li>';
-    } else {
-        bullPoints.forEach(pt => {
-            const li = document.createElement('li');
-            li.innerText = pt;
-            elements.bullishPoints.appendChild(li);
-        });
-    }
-    
-    elements.bearishPoints.innerHTML = '';
-    const bearPoints = ai.bearish_thesis_points || ai.bearish_thesis || [];
-    if (bearPoints.length === 0) {
-        elements.bearishPoints.innerHTML = '<li>Không phát hiện luận điểm giảm giá cụ thể.</li>';
-    } else {
-        bearPoints.forEach(pt => {
-            const li = document.createElement('li');
-            li.innerText = pt;
-            elements.bearishPoints.appendChild(li);
-        });
-    }
-    
-    // 5. Render News Headlines
-    elements.newsContainer.innerHTML = '';
-    const news = data.news_details || [];
-    if (news.length === 0) {
-        elements.newsContainer.innerHTML = `
-            <div class="news-item">
-                <span class="news-time">Không có tin tức</span>
-                <span class="news-title">Không tìm thấy tin tức tiêu đề thị trường lúc này.</span>
-            </div>
-        `;
-    } else {
-        news.forEach(item => {
-            const timeStr = item.time || 'Vừa xong';
-            const title = item.title || 'Tiêu đề';
-            const link = item.link || '#';
-            const source = item.source || 'Tin Tài Chính';
-            
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'news-item';
-            itemDiv.innerHTML = `
-                <span class="news-time">${timeStr}</span>
-                <a href="${link}" target="_blank" class="news-title">${title}</a>
-                <span class="news-source">${source}</span>
-            `;
-            elements.newsContainer.appendChild(itemDiv);
-        });
-    }
 }
